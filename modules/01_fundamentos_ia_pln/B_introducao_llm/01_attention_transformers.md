@@ -24,7 +24,9 @@ O objetivo central desta seção é apresentar o **mecanismo de autoatenção (s
 
 1.  **Representações:** Ao processar o token **"ele"**, a **Query (Q)** de "ele" pergunta: *"A quem 'ele' se refere?"*. As **Keys (K)** de "gato" e "peixe" contêm etiquetas que indicam sujeitos prováveis.
 2.  **Cálculo Matricial:** O modelo utiliza o **Scaled Dot-Product Attention**:
-    $$Attention(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V$$
+    
+    $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V$$
+
     O produto escalar ($Q \cdot K^T$) entre a Query de "ele" e a Key de "gato" gera uma pontuação (score) significativamente maior do que com a Key de "peixe".
 3.  **Resultado Final:** Após a função **Softmax**, o peso de atenção para "gato" pode ser de **0.90**, enquanto para "peixe" é apenas **0.02**. O **Value (V)** de "gato" é então multiplicado por esse peso alto, resultando em uma **saída contextualizada** onde o vetor numérico de "ele" agora carrega a informação semântica de "gato".
 
