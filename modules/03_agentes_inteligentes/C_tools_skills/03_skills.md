@@ -24,8 +24,6 @@ Abaixo, a evolução da inteligência operacional dos agentes, desde a instruç�
 | **MCP** | Acessar (recursos) - _**onde** posso acessar?_ | Padroniza o acesso a diferentes sistemas. | Resolve a conexão, mas não o conhecimento operacional. |
 | **Skills** | Especializar (domínio) - _**como** devo fazer?_ | Encapsula o **método** de forma modular e versionável. | Exige manutenção e documentação sempre acurada. |
 
-![](tools_mcp_skills.png)
-
 ## Diagrama de Fluxo Lógico
 
 O funcionamento de uma skill baseia-se no princípio de carregar apenas o necessário, no momento certo, para otimizar o uso de contexto.
@@ -45,5 +43,3 @@ graph TD
 3.  **Seleção e Ativação:** O agente identifica a skill que corresponde à tarefa e a "carrega" para sua memória de trabalho.
 4.  **Execução:** A skill fornece as instruções, referências e ferramentas necessárias. O agente segue o fluxo operacional definido (ex: validar serviço -> consultar logs -> gerar relatório).
 5.  **Resultado:** O agente entrega a resposta final baseada no conhecimento especializado da skill.
-
-![](full_system.png)
