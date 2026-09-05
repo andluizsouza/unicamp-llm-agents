@@ -52,7 +52,3 @@ graph TD
 3. **Avaliação do Ambiente:** A resposta preliminar ou ação executada interage com o ambiente (que pode ser um compilador de código, um banco de dados, outro agente ou um usuário humano), retornando um feedback.
 4. **Autoavaliação Crítica:** O modelo é estimulado por prompts especializados a analisar o cenário completo: por que falhou ou o que garantiu o sucesso. O sinal simples do ambiente é convertido em instruções compreensíveis para o próprio agente.
 5. **Persistência de Dados:** Em vez de salvar a reflexão de forma isolada, o sistema armazena a estrutura contextualizada composta pelo prompt original, a resposta dada pelo agente, o feedback recebido e a reflexão final. Essa tupla completa fica disponível para consultas futuras.
-
-***
-
-💡 **Sugestão de próximo passo:** Gostaria de explorar os padrões práticos de prompts que ativam essa autorreflexão no agente (como o *Error-Correction* ou *Strategy Extraction*) ou discutir as questões em aberto sobre o uso de modelos menores (SLMs) para baratear esse processo?
