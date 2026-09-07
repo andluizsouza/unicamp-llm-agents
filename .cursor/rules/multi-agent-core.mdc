@@ -1,0 +1,16 @@
+---
+description: Contrato permanente — pacote CLI, notebooks só relatório, evolução datada
+alwaysApply: true
+---
+
+# Sistema multiagente — regras centrais
+
+- O sistema vive em `src/` e corre por **CLI** (`make chat`, `make eval`). Notebooks não implementam harness, grafo, tools nem métricas: só Markdown e chamadas ao pacote.
+- Comece pelo mais simples. O default do CLI é a versão do incremento vigente. Baseline sempre via `--arch`. Empate ou piora no eval é resultado válido a relatar, não motivo para apagar a versão.
+- Peças extra (além do incremento) só com limitação medida. Técnicas sem ordem fixa.
+- Toda arquitetura é documentada e **datada**. Comparações: mesmo modelo, mesmo ambiente, baseline reexecutado na hora.
+- Golden-set só cresce. Casos antigos imutáveis, salvo defeito real (com registro + reexecução). Hash do conjunto.
+- Python 3.14. Poetry (`pyproject.toml` + `poetry.lock`).
+- Sem chaves em git, notebooks ou prompts versionados.
+- Código em inglês. Docs, ADRs e conversa em português.
+- Skills: `multi-agent-patterns`, `python-agent-quality`, `agent-evaluation`, `project-ops`, `architecture-adrs`.

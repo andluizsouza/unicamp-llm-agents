@@ -1,0 +1,16 @@
+---
+description: Padrões Python de sistemas multiagente (PEP 8/257, tipos, SOLID)
+globs: src/**/*.py, tests/**/*.py
+alwaysApply: false
+---
+
+# Python no pacote da aplicação
+
+- Python 3.14. Type hints em APIs públicas.
+- PEP 8 + Ruff. Docstrings Google style em módulos, classes e funções públicas.
+- Um módulo = uma responsabilidade. Grafos, tools, RAG, MCP, eval e CLI não compartilham o mesmo arquivo.
+- Dependências apontam para abstrações (`Protocol` / ports). LLM, retriever e I/O são injetáveis — nunca o cliente de API no miolo do grafo.
+- Tools: coesão alta, schema Pydantic, descrição para o modelo, erros estruturados.
+- Nós LangGraph: funções puras `(state) -> dict`; efeitos colaterais em adapters.
+- Sem `print` de debug em código de produto. Logger do pacote.
+- Lógica de produto não entra em `.ipynb`. Detalhes: skill `python-agent-quality`.

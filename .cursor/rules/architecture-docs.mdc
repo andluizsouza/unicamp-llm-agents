@@ -1,0 +1,12 @@
+---
+description: ADRs datados e mapa de arquitetura de sistemas multiagente
+globs: docs/**/*.md
+alwaysApply: false
+---
+
+# Documentação de arquitetura
+
+- Toda mudança de arquitetura (nova técnica, grafo, modelo, armazenamento) vira ADR datado em `docs/adr/NNNN-titulo.md`.
+- ADR: data, contexto, opções, decisão, consequências, evidência de eval (ou hipótese a medir).
+- `docs/architecture.md` descreve o desenho **atual** (com data da última promoção), não o alvo futuro.
+- Complexidade nova sem ADR datado = incompleto. O sistema corre por CLI; o notebook não substitui o mapa. Skill: `architecture-adrs`.
