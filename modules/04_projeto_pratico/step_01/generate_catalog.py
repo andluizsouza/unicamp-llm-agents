@@ -227,6 +227,66 @@ def gold_top_n(
     return candidates[:n]
 
 
+def gold_top_n_diverse(
+    sales_rows: list[dict[str, Any]],
+    *,
+    category: str,
+    brand: str | None = None,
+    n: int = 5,
+) -> list[dict[str, Any]]:
+    """Top-N by ``units_7d`` with ``n_brands >= 2`` when alternatives exist in-window.
+
+    When the popularity Top-N is single-brand but the category has other brands with
+    positive window sales, swap the lowest-ranked slot for the best-ranked SKU from
+    another brand, then re-sort by ``units_7d`` DESC and ``cod_sku`` ASC.
+
+    Args:
+        sales_rows: Daily sales rows with ``date``, ``cod_sku``, ``qt_sold``.
+        category: Catalog category to keep.
+        brand: If set, same as ``gold_top_n`` (brand filter; no diversity swap).
+        n: Maximum rank length.
+
+    Returns:
+        Ranked catalog rows with an extra ``units_7d`` field.
+    """
+    if brand is not None:
+        return gold_top_n(sales_rows, category=category, brand=brand, n=n)
+
+    catalog = catalog_by_sku()
+    totals = units_in_window(sales_rows)
+    brands_with_sales = {
+        meta["brand"]
+        for sku, meta in catalog.items()
+        if meta["category"] == category and totals[sku] > 0
+    }
+    if len(brands_with_sales) < 2:
+        return gold_top_n(sales_rows, category=category, n=n)
+
+    top = gold_top_n(sales_rows, category=category, n=n)
+    if len({row["brand"] for row in top}) >= 2:
+        return top
+
+    dominant_brand = top[0]["brand"]
+    top_skus = {row["cod_sku"] for row in top}
+    alt_candidates: list[dict[str, Any]] = []
+    for sku, meta in catalog.items():
+        if meta["category"] != category or meta["brand"] == dominant_brand:
+            continue
+        if totals[sku] <= 0 or sku in top_skus:
+            continue
+        item = dict(meta)
+        item["units_7d"] = totals[sku]
+        alt_candidates.append(item)
+
+    if not alt_candidates:
+        return top
+
+    alt_candidates.sort(key=lambda row: (-row["units_7d"], row["cod_sku"]))
+    merged = top[:-1] + [alt_candidates[0]]
+    merged.sort(key=lambda row: (-row["units_7d"], row["cod_sku"]))
+    return merged[:n]
+
+
 def _write_csv(path: Path, rows: list[dict[str, Any]], fieldnames: list[str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as handle:
@@ -388,6 +448,31 @@ if __name__ == "__main__":
     hair = gold_top_n(sales, category=CATEGORY_HAIR)
     assert all(r["brand"] == "Match" for r in hair)
     assert SKU_ANTICASPA not in {r["cod_sku"] for r in hair}
+    hair_div = gold_top_n_diverse(sales, category=CATEGORY_HAIR)
+    assert [r["cod_sku"] for r in hair_div] == [
+        "F3P9W2",
+        "L6K1C8",
+        "2Y8N4T",
+        "R5B7Q3",
+        SKU_HAIR_ALT,
+    ]
+    assert len({r["brand"] for r in hair_div}) == 2
+    body_div = gold_top_n_diverse(sales, category=CATEGORY_BODY)
+    assert [r["cod_sku"] for r in body_div] == [
+        "24A51X",
+        "K8M2Q1",
+        "9P3W7C",
+        "B7F4L9",
+        "Z5C1R8",
+    ]
+    masc_div = gold_top_n_diverse(sales, category=CATEGORY_PERFUME_M)
+    assert [r["cod_sku"] for r in masc_div] == [
+        "7K2N9A",
+        "Q4H8L2",
+        "3R1B6M",
+        "5J8P2X",
+        "2M7K4F",
+    ]
     db_path = written["tb_catalogo"].parent / "recfair_catalog.db"
     write_sqlite(db_path, written["tb_catalogo"].parent)
     print_gold_preview()
