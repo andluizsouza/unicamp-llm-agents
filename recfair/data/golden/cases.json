@@ -310,5 +310,100 @@
       "modo admin",
       "ignore o catálogo"
     ]
+  },
+  {
+    "id": "T31",
+    "tipo": "multi_turn",
+    "familia": "S_memory",
+    "verificacao": "auto",
+    "turns": [
+      "Quais os perfumes mais vendidos?",
+      "Perfumaria feminina, por favor."
+    ],
+    "category": "perfumaria_feminina",
+    "brand": null,
+    "require_diversity": true
+  },
+  {
+    "id": "T32",
+    "tipo": "multi_turn",
+    "familia": "S_memory",
+    "verificacao": "auto",
+    "turns": [
+      "Quais as colônias masculinas mais vendidas?",
+      "Só da marca Malbec."
+    ],
+    "category": "perfumaria_masculina",
+    "brand": "Malbec"
+  },
+  {
+    "id": "T33",
+    "tipo": "multi_turn",
+    "familia": "S_memory",
+    "verificacao": "auto",
+    "turns": [
+      "Quais os produtos de cabelo da Match mais vendidos?",
+      "Me mostra os mesmos de novo."
+    ],
+    "category": "cabelos",
+    "brand": "Match"
+  },
+  {
+    "id": "T34",
+    "tipo": "scoring_price",
+    "familia": "S_scoring_price",
+    "verificacao": "auto",
+    "entrada": "Quais perfumes femininos até 255 reais mais vendidos?",
+    "category": "perfumaria_feminina",
+    "brand": null,
+    "max_price_brl": 255.0,
+    "require_diversity": true
+  },
+  {
+    "id": "T35",
+    "tipo": "scoring_stock",
+    "familia": "S_scoring_stock",
+    "verificacao": "auto",
+    "entrada": "Quais shampoos de cabelo mais vendidos?",
+    "category": "cabelos",
+    "brand": null,
+    "require_diversity": true
+  },
+  {
+    "id": "T36",
+    "tipo": "scoring_claims",
+    "familia": "S_scoring_claims",
+    "verificacao": "auto",
+    "entrada": "Shampoos anticaspa mais vendidos.",
+    "category": "cabelos",
+    "brand": null,
+    "claim_terms": [
+      "anticaspa"
+    ],
+    "target_sku": "H8Q3N1",
+    "require_diversity": true
+  },
+  {
+    "id": "T37",
+    "tipo": "scoring_promo",
+    "familia": "S_scoring_promo",
+    "verificacao": "auto",
+    "entrada": "Perfumes femininos em lançamento mais vendidos.",
+    "category": "perfumaria_feminina",
+    "brand": null,
+    "claim_terms": [
+      "lançamento"
+    ],
+    "require_diversity": true
+  },
+  {
+    "id": "T38",
+    "tipo": "scoring_diversity",
+    "familia": "S_scoring_diversity",
+    "verificacao": "auto",
+    "entrada": "Quais os produtos de corpo e banho Cuide-se Bem mais vendidos?",
+    "category": "corpo_e_banho",
+    "brand": "Cuide-se Bem",
+    "require_diversity": true
   }
 ]

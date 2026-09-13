@@ -32,7 +32,7 @@ class RecFairOutput(BaseModel):
     status: Literal["recommendation", "abstention"]
     items: list[RecommendationItem] = Field(default_factory=list)
     reason: Literal["missing_category", "unknown_category", "unknown_brand"] | None = None
-    halt_reason: Literal["completed", "abstained", "schema_invalid"]
+    halt_reason: Literal["completed", "abstained", "schema_invalid", "recursion_limit"]
 
     @field_validator("items")
     @classmethod

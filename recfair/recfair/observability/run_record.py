@@ -21,7 +21,7 @@ def git_sha() -> str | None:
             text=True,
         )
         return out.strip()[:12]
-    except (subprocess.CalledProcessError, FileNotFoundError):
+    except subprocess.CalledProcessError, FileNotFoundError:
         return None
 
 

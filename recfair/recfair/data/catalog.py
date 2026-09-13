@@ -30,6 +30,7 @@ CATEGORY_PERFUME_F = "perfumaria_feminina"
 CATEGORY_BODY = "corpo_e_banho"
 CATEGORY_HAIR = "cabelos"
 
+
 def _default_data_dir() -> Path:
     """Directory for CSVs at app ``data/``."""
     from recfair.config import data_dir
@@ -46,61 +47,333 @@ SKU_HAIR_ALT = "A8T3K5"
 
 CATALOG: list[dict[str, Any]] = [
     # Perfumaria masculina — 5 Malbec so a popularity Top-5 can be 5× one brand (T05).
-    {"cod_sku": "7K2N9A", "name_sku": "Malbec Desodorante Colônia 100ml", "brand": "Malbec", "category": CATEGORY_PERFUME_M, "base_price": 219.90},
-    {"cod_sku": "Q4H8L2", "name_sku": "Malbec Eau de Parfum 90ml", "brand": "Malbec", "category": CATEGORY_PERFUME_M, "base_price": 279.90},
-    {"cod_sku": "3R1B6M", "name_sku": "Malbec Signature Eau de Parfum 90ml", "brand": "Malbec", "category": CATEGORY_PERFUME_M, "base_price": 379.90},
-    {"cod_sku": "W9C5TD", "name_sku": "Malbec Gold Desodorante Colônia 100ml", "brand": "Malbec", "category": CATEGORY_PERFUME_M, "base_price": 259.90},
-    {"cod_sku": "5J8P2X", "name_sku": "Malbec Club Intenso Desodorante Colônia 100ml", "brand": "Malbec", "category": CATEGORY_PERFUME_M, "base_price": 249.90},
-    {"cod_sku": "2M7K4F", "name_sku": "Zaad Eau de Parfum 95ml", "brand": "Zaad", "category": CATEGORY_PERFUME_M, "base_price": 349.90},
-    {"cod_sku": "H3L9Q1", "name_sku": "Quasar Deep Blue Desodorante Colônia 100ml", "brand": "Quasar", "category": CATEGORY_PERFUME_M, "base_price": 189.90},
-    {"cod_sku": "8V4C6N", "name_sku": "Arbo Desodorante Colônia 100ml", "brand": "Arbo", "category": CATEGORY_PERFUME_M, "base_price": 189.90},
-    {"cod_sku": "P1T8R5", "name_sku": "Egeo Bomb Black Desodorante Colônia 90ml", "brand": "Egeo", "category": CATEGORY_PERFUME_M, "base_price": 164.90},
-    {"cod_sku": SKU_CLASH, "name_sku": "Clash Desodorante Colônia 100ml", "brand": "Clash", "category": CATEGORY_PERFUME_M, "base_price": 179.90},
+    {
+        "cod_sku": "7K2N9A",
+        "name_sku": "Malbec Desodorante Colônia 100ml",
+        "brand": "Malbec",
+        "category": CATEGORY_PERFUME_M,
+        "base_price": 219.90,
+    },
+    {
+        "cod_sku": "Q4H8L2",
+        "name_sku": "Malbec Eau de Parfum 90ml",
+        "brand": "Malbec",
+        "category": CATEGORY_PERFUME_M,
+        "base_price": 279.90,
+    },
+    {
+        "cod_sku": "3R1B6M",
+        "name_sku": "Malbec Signature Eau de Parfum 90ml",
+        "brand": "Malbec",
+        "category": CATEGORY_PERFUME_M,
+        "base_price": 379.90,
+    },
+    {
+        "cod_sku": "W9C5TD",
+        "name_sku": "Malbec Gold Desodorante Colônia 100ml",
+        "brand": "Malbec",
+        "category": CATEGORY_PERFUME_M,
+        "base_price": 259.90,
+    },
+    {
+        "cod_sku": "5J8P2X",
+        "name_sku": "Malbec Club Intenso Desodorante Colônia 100ml",
+        "brand": "Malbec",
+        "category": CATEGORY_PERFUME_M,
+        "base_price": 249.90,
+    },
+    {
+        "cod_sku": "2M7K4F",
+        "name_sku": "Zaad Eau de Parfum 95ml",
+        "brand": "Zaad",
+        "category": CATEGORY_PERFUME_M,
+        "base_price": 349.90,
+    },
+    {
+        "cod_sku": "H3L9Q1",
+        "name_sku": "Quasar Deep Blue Desodorante Colônia 100ml",
+        "brand": "Quasar",
+        "category": CATEGORY_PERFUME_M,
+        "base_price": 189.90,
+    },
+    {
+        "cod_sku": "8V4C6N",
+        "name_sku": "Arbo Desodorante Colônia 100ml",
+        "brand": "Arbo",
+        "category": CATEGORY_PERFUME_M,
+        "base_price": 189.90,
+    },
+    {
+        "cod_sku": "P1T8R5",
+        "name_sku": "Egeo Bomb Black Desodorante Colônia 90ml",
+        "brand": "Egeo",
+        "category": CATEGORY_PERFUME_M,
+        "base_price": 164.90,
+    },
+    {
+        "cod_sku": SKU_CLASH,
+        "name_sku": "Clash Desodorante Colônia 100ml",
+        "brand": "Clash",
+        "category": CATEGORY_PERFUME_M,
+        "base_price": 179.90,
+    },
     # Perfumaria feminina
-    {"cod_sku": "8K2F6Q", "name_sku": "Lily Eau de Parfum 75ml", "brand": "Lily", "category": CATEGORY_PERFUME_F, "base_price": 294.90},
-    {"cod_sku": "D1W5N9", "name_sku": "Lily Gardênia Eau de Parfum 75ml", "brand": "Lily", "category": CATEGORY_PERFUME_F, "base_price": 294.90},
-    {"cod_sku": "6P8H3A", "name_sku": "Floratta Red Desodorante Colônia 75ml", "brand": "Floratta", "category": CATEGORY_PERFUME_F, "base_price": 146.85},
-    {"cod_sku": "Y4C2L7", "name_sku": "Floratta Blue Desodorante Colônia 75ml", "brand": "Floratta", "category": CATEGORY_PERFUME_F, "base_price": 174.90},
-    {"cod_sku": "1M9T5B", "name_sku": "Her Code Eau de Parfum 50ml", "brand": "Her Code", "category": CATEGORY_PERFUME_F, "base_price": 254.90},
-    {"cod_sku": "5X3R8K", "name_sku": "Coffee Woman Seduction Desodorante Colônia 100ml", "brand": "Coffee", "category": CATEGORY_PERFUME_F, "base_price": 229.90},
-    {"cod_sku": "G7Q2D4", "name_sku": "Elysée Blanc Eau de Parfum 50ml", "brand": "Elysée", "category": CATEGORY_PERFUME_F, "base_price": 329.90},
-    {"cod_sku": "N6A1V8", "name_sku": "Glamour Secrets Black Desodorante Colônia 75ml", "brand": "Glamour", "category": CATEGORY_PERFUME_F, "base_price": 150.90},
-    {"cod_sku": "2C8L4P", "name_sku": "Egeo Dolce Desodorante Colônia 90ml", "brand": "Egeo", "category": CATEGORY_PERFUME_F, "base_price": 164.90},
-    {"cod_sku": "9H5W1T", "name_sku": "Botica 214 Peônia e Apricot Eau de Parfum 75ml", "brand": "Botica 214", "category": CATEGORY_PERFUME_F, "base_price": 249.90},
+    {
+        "cod_sku": "8K2F6Q",
+        "name_sku": "Lily Eau de Parfum 75ml",
+        "brand": "Lily",
+        "category": CATEGORY_PERFUME_F,
+        "base_price": 294.90,
+    },
+    {
+        "cod_sku": "D1W5N9",
+        "name_sku": "Lily Gardênia Eau de Parfum 75ml",
+        "brand": "Lily",
+        "category": CATEGORY_PERFUME_F,
+        "base_price": 294.90,
+    },
+    {
+        "cod_sku": "6P8H3A",
+        "name_sku": "Floratta Red Desodorante Colônia 75ml",
+        "brand": "Floratta",
+        "category": CATEGORY_PERFUME_F,
+        "base_price": 146.85,
+    },
+    {
+        "cod_sku": "Y4C2L7",
+        "name_sku": "Floratta Blue Desodorante Colônia 75ml",
+        "brand": "Floratta",
+        "category": CATEGORY_PERFUME_F,
+        "base_price": 174.90,
+    },
+    {
+        "cod_sku": "1M9T5B",
+        "name_sku": "Her Code Eau de Parfum 50ml",
+        "brand": "Her Code",
+        "category": CATEGORY_PERFUME_F,
+        "base_price": 254.90,
+    },
+    {
+        "cod_sku": "5X3R8K",
+        "name_sku": "Coffee Woman Seduction Desodorante Colônia 100ml",
+        "brand": "Coffee",
+        "category": CATEGORY_PERFUME_F,
+        "base_price": 229.90,
+    },
+    {
+        "cod_sku": "G7Q2D4",
+        "name_sku": "Elysée Blanc Eau de Parfum 50ml",
+        "brand": "Elysée",
+        "category": CATEGORY_PERFUME_F,
+        "base_price": 329.90,
+    },
+    {
+        "cod_sku": "N6A1V8",
+        "name_sku": "Glamour Secrets Black Desodorante Colônia 75ml",
+        "brand": "Glamour",
+        "category": CATEGORY_PERFUME_F,
+        "base_price": 150.90,
+    },
+    {
+        "cod_sku": "2C8L4P",
+        "name_sku": "Egeo Dolce Desodorante Colônia 90ml",
+        "brand": "Egeo",
+        "category": CATEGORY_PERFUME_F,
+        "base_price": 164.90,
+    },
+    {
+        "cod_sku": "9H5W1T",
+        "name_sku": "Botica 214 Peônia e Apricot Eau de Parfum 75ml",
+        "brand": "Botica 214",
+        "category": CATEGORY_PERFUME_F,
+        "base_price": 249.90,
+    },
     # Corpo e banho — 5 Cuide-se Bem so a popularity Top-5 can be 5× one brand (T04).
-    {"cod_sku": "24A51X", "name_sku": "Loção Hidratante Cuide-se Bem Nuvem 400ml", "brand": "Cuide-se Bem", "category": CATEGORY_BODY, "base_price": 57.90},
-    {"cod_sku": "K8M2Q1", "name_sku": "Sabonete em Barra Cuide-se Bem Cereja 2x80g", "brand": "Cuide-se Bem", "category": CATEGORY_BODY, "base_price": 21.90},
-    {"cod_sku": "9P3W7C", "name_sku": "Loção Hidratante Cuide-se Bem Deleite 400ml", "brand": "Cuide-se Bem", "category": CATEGORY_BODY, "base_price": 57.90},
-    {"cod_sku": "B7F4L9", "name_sku": "Loção Cuide-se Bem Rosa e Algodão 400ml", "brand": "Cuide-se Bem", "category": CATEGORY_BODY, "base_price": 57.90},
-    {"cod_sku": "T2N8H4", "name_sku": "Loção Hidratante Cuide-se Bem Beijinho 400ml", "brand": "Cuide-se Bem", "category": CATEGORY_BODY, "base_price": 57.90},
-    {"cod_sku": "Z5C1R8", "name_sku": "Loção Firmadora Corporal Nativa SPA Quinoa 400ml", "brand": "Nativa SPA", "category": CATEGORY_BODY, "base_price": 89.90},
-    {"cod_sku": "4W6J2P", "name_sku": "Sabonete Líquido Nativa SPA Orquídea Noire 250ml", "brand": "Nativa SPA", "category": CATEGORY_BODY, "base_price": 54.90},
-    {"cod_sku": "M9D3K7", "name_sku": "Refil Sabonete Líquido Nativa SPA Orquídea Noire 200ml", "brand": "Nativa SPA", "category": CATEGORY_BODY, "base_price": 44.90},
-    {"cod_sku": "X1Q8V3", "name_sku": "Sabonete em Barra Malbec 2x80g", "brand": "Malbec", "category": CATEGORY_BODY, "base_price": 31.90},
-    {"cod_sku": "7H5A2E", "name_sku": "Loção Hidratante Lily 250ml", "brand": "Lily", "category": CATEGORY_BODY, "base_price": 99.90},
+    {
+        "cod_sku": "24A51X",
+        "name_sku": "Loção Hidratante Cuide-se Bem Nuvem 400ml",
+        "brand": "Cuide-se Bem",
+        "category": CATEGORY_BODY,
+        "base_price": 57.90,
+    },
+    {
+        "cod_sku": "K8M2Q1",
+        "name_sku": "Sabonete em Barra Cuide-se Bem Cereja 2x80g",
+        "brand": "Cuide-se Bem",
+        "category": CATEGORY_BODY,
+        "base_price": 21.90,
+    },
+    {
+        "cod_sku": "9P3W7C",
+        "name_sku": "Loção Hidratante Cuide-se Bem Deleite 400ml",
+        "brand": "Cuide-se Bem",
+        "category": CATEGORY_BODY,
+        "base_price": 57.90,
+    },
+    {
+        "cod_sku": "B7F4L9",
+        "name_sku": "Loção Cuide-se Bem Rosa e Algodão 400ml",
+        "brand": "Cuide-se Bem",
+        "category": CATEGORY_BODY,
+        "base_price": 57.90,
+    },
+    {
+        "cod_sku": "T2N8H4",
+        "name_sku": "Loção Hidratante Cuide-se Bem Beijinho 400ml",
+        "brand": "Cuide-se Bem",
+        "category": CATEGORY_BODY,
+        "base_price": 57.90,
+    },
+    {
+        "cod_sku": "Z5C1R8",
+        "name_sku": "Loção Firmadora Corporal Nativa SPA Quinoa 400ml",
+        "brand": "Nativa SPA",
+        "category": CATEGORY_BODY,
+        "base_price": 89.90,
+    },
+    {
+        "cod_sku": "4W6J2P",
+        "name_sku": "Sabonete Líquido Nativa SPA Orquídea Noire 250ml",
+        "brand": "Nativa SPA",
+        "category": CATEGORY_BODY,
+        "base_price": 54.90,
+    },
+    {
+        "cod_sku": "M9D3K7",
+        "name_sku": "Refil Sabonete Líquido Nativa SPA Orquídea Noire 200ml",
+        "brand": "Nativa SPA",
+        "category": CATEGORY_BODY,
+        "base_price": 44.90,
+    },
+    {
+        "cod_sku": "X1Q8V3",
+        "name_sku": "Sabonete em Barra Malbec 2x80g",
+        "brand": "Malbec",
+        "category": CATEGORY_BODY,
+        "base_price": 31.90,
+    },
+    {
+        "cod_sku": "7H5A2E",
+        "name_sku": "Loção Hidratante Lily 250ml",
+        "brand": "Lily",
+        "category": CATEGORY_BODY,
+        "base_price": 99.90,
+    },
     # Cabelos — 5 Match (T01 trap); anticaspa is not in the 7-day Top-5 (T11).
-    {"cod_sku": "F3P9W2", "name_sku": "Shampoo Match Ciência das Curvas 300ml", "brand": "Match", "category": CATEGORY_HAIR, "base_price": 45.90},
-    {"cod_sku": "L6K1C8", "name_sku": "Shampoo Match Oleosidade Controlada 300ml", "brand": "Match", "category": CATEGORY_HAIR, "base_price": 47.90},
-    {"cod_sku": "2Y8N4T", "name_sku": "Shampoo Match Liso Prolongado 300ml", "brand": "Match", "category": CATEGORY_HAIR, "base_price": 47.90},
-    {"cod_sku": "R5B7Q3", "name_sku": "Shampoo Match Nutrição Regeneradora 300ml", "brand": "Match", "category": CATEGORY_HAIR, "base_price": 47.90},
-    {"cod_sku": "9C4M1H", "name_sku": "Condicionador Match Nutrição Regeneradora 280ml", "brand": "Match", "category": CATEGORY_HAIR, "base_price": 49.90},
-    {"cod_sku": SKU_ANTICASPA, "name_sku": "Shampoo Esfoliante Anticaspa Malbec 150ml", "brand": "Malbec", "category": CATEGORY_HAIR, "base_price": 59.90},
-    {"cod_sku": "V2L9D6", "name_sku": "Shampoo Antiqueda Malbec 250ml", "brand": "Malbec", "category": CATEGORY_HAIR, "base_price": 55.90},
-    {"cod_sku": SKU_HAIR_ALT, "name_sku": "Shampoo Cuide-se Bem Feira Cachos de Uva 270ml", "brand": "Cuide-se Bem", "category": CATEGORY_HAIR, "base_price": 25.90},
-    {"cod_sku": "3G7P2W", "name_sku": "Shampoo Cuide-se Bem Feira Vinagre de Framboesa 230ml", "brand": "Cuide-se Bem", "category": CATEGORY_HAIR, "base_price": 27.90},
-    {"cod_sku": "E4N8J1", "name_sku": "Shampoo Cuide-se Bem Feira Óleo de Coco 230ml", "brand": "Cuide-se Bem", "category": CATEGORY_HAIR, "base_price": 25.90},
+    {
+        "cod_sku": "F3P9W2",
+        "name_sku": "Shampoo Match Ciência das Curvas 300ml",
+        "brand": "Match",
+        "category": CATEGORY_HAIR,
+        "base_price": 45.90,
+    },
+    {
+        "cod_sku": "L6K1C8",
+        "name_sku": "Shampoo Match Oleosidade Controlada 300ml",
+        "brand": "Match",
+        "category": CATEGORY_HAIR,
+        "base_price": 47.90,
+    },
+    {
+        "cod_sku": "2Y8N4T",
+        "name_sku": "Shampoo Match Liso Prolongado 300ml",
+        "brand": "Match",
+        "category": CATEGORY_HAIR,
+        "base_price": 47.90,
+    },
+    {
+        "cod_sku": "R5B7Q3",
+        "name_sku": "Shampoo Match Nutrição Regeneradora 300ml",
+        "brand": "Match",
+        "category": CATEGORY_HAIR,
+        "base_price": 47.90,
+    },
+    {
+        "cod_sku": "9C4M1H",
+        "name_sku": "Condicionador Match Nutrição Regeneradora 280ml",
+        "brand": "Match",
+        "category": CATEGORY_HAIR,
+        "base_price": 49.90,
+    },
+    {
+        "cod_sku": SKU_ANTICASPA,
+        "name_sku": "Shampoo Esfoliante Anticaspa Malbec 150ml",
+        "brand": "Malbec",
+        "category": CATEGORY_HAIR,
+        "base_price": 59.90,
+    },
+    {
+        "cod_sku": "V2L9D6",
+        "name_sku": "Shampoo Antiqueda Malbec 250ml",
+        "brand": "Malbec",
+        "category": CATEGORY_HAIR,
+        "base_price": 55.90,
+    },
+    {
+        "cod_sku": SKU_HAIR_ALT,
+        "name_sku": "Shampoo Cuide-se Bem Feira Cachos de Uva 270ml",
+        "brand": "Cuide-se Bem",
+        "category": CATEGORY_HAIR,
+        "base_price": 25.90,
+    },
+    {
+        "cod_sku": "3G7P2W",
+        "name_sku": "Shampoo Cuide-se Bem Feira Vinagre de Framboesa 230ml",
+        "brand": "Cuide-se Bem",
+        "category": CATEGORY_HAIR,
+        "base_price": 27.90,
+    },
+    {
+        "cod_sku": "E4N8J1",
+        "name_sku": "Shampoo Cuide-se Bem Feira Óleo de Coco 230ml",
+        "brand": "Cuide-se Bem",
+        "category": CATEGORY_HAIR,
+        "base_price": 25.90,
+    },
 ]
 
 # Window 25–31/08. Top-5 by units is 5× Malbec / 5× Cuide-se Bem / 5× Match.
 UNITS_7D: dict[str, int] = {
-    "7K2N9A": 400, "Q4H8L2": 350, "3R1B6M": 300, "5J8P2X": 210, "W9C5TD": 210,
-    "2M7K4F": 150, "8V4C6N": 140, "H3L9Q1": 140, "P1T8R5": 120, SKU_CLASH: 25,
-    "8K2F6Q": 400, "D1W5N9": 300, "6P8H3A": 250, "1M9T5B": 160, "5X3R8K": 150,
-    "2C8L4P": 140, "N6A1V8": 130, "9H5W1T": 120, "Y4C2L7": 80, "G7Q2D4": 70,
-    "24A51X": 220, "K8M2Q1": 205, "9P3W7C": 190, "B7F4L9": 180, "T2N8H4": 170,
-    "Z5C1R8": 140, "4W6J2P": 90, "X1Q8V3": 80, "7H5A2E": 70, "M9D3K7": 50,
-    "F3P9W2": 280, "L6K1C8": 210, "2Y8N4T": 190, "R5B7Q3": 175, "9C4M1H": 160,
-    SKU_HAIR_ALT: 155, "3G7P2W": 140, "E4N8J1": 140, SKU_ANTICASPA: 70, "V2L9D6": 60,
+    "7K2N9A": 400,
+    "Q4H8L2": 350,
+    "3R1B6M": 300,
+    "5J8P2X": 210,
+    "W9C5TD": 210,
+    "2M7K4F": 150,
+    "8V4C6N": 140,
+    "H3L9Q1": 140,
+    "P1T8R5": 120,
+    SKU_CLASH: 25,
+    "8K2F6Q": 400,
+    "D1W5N9": 300,
+    "6P8H3A": 250,
+    "1M9T5B": 160,
+    "5X3R8K": 150,
+    "2C8L4P": 140,
+    "N6A1V8": 130,
+    "9H5W1T": 120,
+    "Y4C2L7": 80,
+    "G7Q2D4": 70,
+    "24A51X": 220,
+    "K8M2Q1": 205,
+    "9P3W7C": 190,
+    "B7F4L9": 180,
+    "T2N8H4": 170,
+    "Z5C1R8": 140,
+    "4W6J2P": 90,
+    "X1Q8V3": 80,
+    "7H5A2E": 70,
+    "M9D3K7": 50,
+    "F3P9W2": 280,
+    "L6K1C8": 210,
+    "2Y8N4T": 190,
+    "R5B7Q3": 175,
+    "9C4M1H": 160,
+    SKU_HAIR_ALT: 155,
+    "3G7P2W": 140,
+    "E4N8J1": 140,
+    SKU_ANTICASPA: 70,
+    "V2L9D6": 60,
 }
 
 # Extra units on 01–24/08 so monthly ranking differs from the 7-day ranking.
@@ -296,21 +569,33 @@ def _write_csv(path: Path, rows: list[dict[str, Any]], fieldnames: list[str]) ->
 
 
 def ensure_csv_files(data_dir: Path | None = None) -> dict[str, Path]:
-    """Write ``tb_catalogo.csv`` and ``tb_vendas.csv`` from ``build_dataset``.
+    """Write catalog, sales, claims and inventory CSVs from in-memory datasets.
 
     Args:
         data_dir: Output directory. Defaults to ``./data`` beside this file.
 
     Returns:
-        Paths of the two CSV files.
+        Paths of the written CSV files.
     """
+    from recfair.data.claims import CLAIM_FIELDS, claims_records
+    from recfair.data.inventory import INVENTORY_FIELDS, inventory_records
+
     target = data_dir or DATA_DIR
     catalog_rows, sales_rows = build_dataset()
     catalog_path = target / "tb_catalogo.csv"
     sales_path = target / "tb_vendas.csv"
+    claims_path = target / "tb_claims.csv"
+    inventory_path = target / "tb_inventory.csv"
     _write_csv(catalog_path, catalog_rows, list(CATALOG_FIELDS))
     _write_csv(sales_path, sales_rows, list(SALES_FIELDS))
-    return {"tb_catalogo": catalog_path, "tb_vendas": sales_path}
+    _write_csv(claims_path, claims_records(), list(CLAIM_FIELDS))
+    _write_csv(inventory_path, inventory_records(), list(INVENTORY_FIELDS))
+    return {
+        "tb_catalogo": catalog_path,
+        "tb_vendas": sales_path,
+        "tb_claims": claims_path,
+        "tb_inventory": inventory_path,
+    }
 
 
 def write_sqlite(db_path: Path, data_dir: Path | None = None) -> Path:
@@ -323,10 +608,14 @@ def write_sqlite(db_path: Path, data_dir: Path | None = None) -> Path:
     Returns:
         Path of the database file.
     """
+    from recfair.data.claims import claims_records
+    from recfair.data.inventory import inventory_records
+
     target = data_dir or DATA_DIR
+    ensure_csv_files(target)
     catalog_rows, sales_rows = build_dataset()
-    _write_csv(target / "tb_catalogo.csv", catalog_rows, list(CATALOG_FIELDS))
-    _write_csv(target / "tb_vendas.csv", sales_rows, list(SALES_FIELDS))
+    claims_rows = claims_records()
+    inventory_rows = inventory_records()
     db_path.parent.mkdir(parents=True, exist_ok=True)
     if db_path.exists():
         db_path.unlink()
@@ -354,6 +643,30 @@ def write_sqlite(db_path: Path, data_dir: Path | None = None) -> Path:
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE tb_claims (
+                cod_sku TEXT NOT NULL,
+                claim_type TEXT NOT NULL,
+                claim_text TEXT NOT NULL,
+                PRIMARY KEY (cod_sku, claim_type),
+                FOREIGN KEY (cod_sku) REFERENCES tb_catalogo (cod_sku)
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE tb_inventory (
+                date TEXT NOT NULL,
+                cod_sku TEXT NOT NULL,
+                units_available INTEGER NOT NULL,
+                is_launch INTEGER NOT NULL,
+                is_promo INTEGER NOT NULL,
+                PRIMARY KEY (date, cod_sku),
+                FOREIGN KEY (cod_sku) REFERENCES tb_catalogo (cod_sku)
+            )
+            """
+        )
         conn.executemany(
             """
             INSERT INTO tb_catalogo (cod_sku, name_sku, brand, category, base_price)
@@ -368,8 +681,23 @@ def write_sqlite(db_path: Path, data_dir: Path | None = None) -> Path:
             """,
             sales_rows,
         )
+        conn.executemany(
+            """
+            INSERT INTO tb_claims (cod_sku, claim_type, claim_text)
+            VALUES (:cod_sku, :claim_type, :claim_text)
+            """,
+            claims_rows,
+        )
+        conn.executemany(
+            """
+            INSERT INTO tb_inventory (date, cod_sku, units_available, is_launch, is_promo)
+            VALUES (:date, :cod_sku, :units_available, :is_launch, :is_promo)
+            """,
+            inventory_rows,
+        )
         conn.commit()
         _assert_sqlite_matches_rows(conn, catalog_rows, sales_rows)
+        _assert_claims_inventory(conn, claims_rows, inventory_rows)
     finally:
         conn.close()
     return db_path
@@ -406,11 +734,47 @@ def _assert_sqlite_matches_rows(
             "SELECT date, cod_sku, qt_sold FROM tb_vendas ORDER BY date, cod_sku"
         )
     ]
-    sales_mem = tuple(
-        sorted((r["date"], r["cod_sku"], int(r["qt_sold"])) for r in sales_rows)
-    )
+    sales_mem = tuple(sorted((r["date"], r["cod_sku"], int(r["qt_sold"])) for r in sales_rows))
     if cat_db != list(cat_mem) or sales_db != list(sales_mem):
         raise AssertionError("SQLite rows do not match the in-memory catalog/sales")
+
+
+def _assert_claims_inventory(
+    conn: sqlite3.Connection,
+    claims_rows: list[dict[str, Any]],
+    inventory_rows: list[dict[str, Any]],
+) -> None:
+    """Fail if claims or inventory tables differ from in-memory rows."""
+    claims_db = [
+        tuple(row)
+        for row in conn.execute(
+            "SELECT cod_sku, claim_type, claim_text FROM tb_claims ORDER BY cod_sku, claim_type"
+        )
+    ]
+    claims_mem = tuple(
+        sorted((r["cod_sku"], r["claim_type"], r["claim_text"]) for r in claims_rows)
+    )
+    inv_db = [
+        tuple(row)
+        for row in conn.execute(
+            "SELECT date, cod_sku, units_available, is_launch, is_promo "
+            "FROM tb_inventory ORDER BY cod_sku"
+        )
+    ]
+    inv_mem = tuple(
+        sorted(
+            (
+                r["date"],
+                r["cod_sku"],
+                int(r["units_available"]),
+                int(r["is_launch"]),
+                int(r["is_promo"]),
+            )
+            for r in inventory_rows
+        )
+    )
+    if claims_db != list(claims_mem) or inv_db != list(inv_mem):
+        raise AssertionError("SQLite claims/inventory do not match in-memory rows")
 
 
 def print_gold_preview() -> None:
@@ -420,7 +784,9 @@ def print_gold_preview() -> None:
     for category in (CATEGORY_PERFUME_M, CATEGORY_PERFUME_F, CATEGORY_BODY, CATEGORY_HAIR):
         print(f"\n=== {category} ===")
         for rank, row in enumerate(gold_top_n(sales, category=category), start=1):
-            print(f"  {rank}. {row['cod_sku']} {row['brand']:16} units_7d={row['units_7d']:4} {row['name_sku']}")
+            print(
+                f"  {rank}. {row['cod_sku']} {row['brand']:16} units_7d={row['units_7d']:4} {row['name_sku']}"
+            )
     print("\n=== cabelos + Match ===")
     for rank, row in enumerate(gold_top_n(sales, category=CATEGORY_HAIR, brand="Match"), start=1):
         print(f"  {rank}. {row['cod_sku']} units_7d={row['units_7d']} {row['name_sku']}")
@@ -428,6 +794,8 @@ def print_gold_preview() -> None:
 
 def main() -> None:
     """CLI entry: regenerate CSVs and run self-checks."""
+    from recfair.data.claims import claims_records
+
     written = ensure_csv_files()
     for name, path in written.items():
         print(f"wrote {name}: {path}")
@@ -476,6 +844,7 @@ def main() -> None:
     ]
     db_path = written["tb_catalogo"].parent / "recfair_catalog.db"
     write_sqlite(db_path, written["tb_catalogo"].parent)
+    assert len(claims_records()) == 200
     print_gold_preview()
     db_path.unlink()
 

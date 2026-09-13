@@ -23,6 +23,7 @@ from recfair.data.catalog import (
     WINDOW_START,
     ensure_csv_files,
 )
+from recfair.observability.tokens import usage_from_response
 from recfair.prompts.baseline_v1 import build_prompt
 from recfair.schemas.output import RecFairOutput
 
@@ -43,6 +44,7 @@ class CaseMetrics:
     tokens_saida: int | None
     chamadas_llm: int
     tool_calls: int
+    scoring_trace: list[dict[str, Any]] | None = None
     erro: str | None = None
 
 
@@ -104,16 +106,6 @@ def _message_text(raw: Any) -> str:
     return str(content or "")
 
 
-def _usage(raw: Any) -> tuple[int | None, int | None]:
-    meta = getattr(raw, "usage_metadata", None) or {}
-    if not isinstance(meta, dict):
-        return (
-            getattr(meta, "input_tokens", None),
-            getattr(meta, "output_tokens", None),
-        )
-    return meta.get("input_tokens"), meta.get("output_tokens")
-
-
 def _parse_output(packed: Any) -> tuple[RecFairOutput | None, Any]:
     raw = None
     parsed = None
@@ -150,7 +142,7 @@ def run(query: str) -> tuple[RecFairOutput, CaseMetrics]:
         packed = structured.invoke(prompt)
         latency = time.perf_counter() - start
         parsed, raw = _parse_output(packed)
-        tokens_in, tokens_out = _usage(raw)
+        tokens_in, tokens_out = usage_from_response(raw)
         if parsed is None:
             parsed = RecFairOutput(
                 status="abstention",

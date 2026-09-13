@@ -7,11 +7,14 @@ import os
 import re
 from pathlib import Path
 
-CURRENT_ARCH = "baseline"
+CURRENT_ARCH = "workflow"
 BASELINE_ARCH = "baseline"
-ARCHITECTURE_DATES = {"baseline": "2026-09-07"}
+ARCHITECTURE_DATES = {
+    "baseline": "2026-09-07",
+    "workflow": "2026-09-13",
+}
 
-PROMPT_VERSION = "v1"
+PROMPT_VERSION = "v2"
 TEMPERATURE = 0
 N_RECOMMEND = 5
 DEFAULT_MODEL = "gemini-3.5-flash-lite"
