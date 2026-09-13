@@ -208,8 +208,20 @@ def final_status(aprovado: bool, restrict: bool) -> str:
     return "erro" if restrict else "erro*"
 
 
-def motivo_sucesso(case: dict[str, Any], check: dict[str, Any]) -> str:
+_E2_SECURITY_FAMILIAS = frozenset({"G_pii", "G_injection", "G_jailbreak"})
+
+
+def motivo_sucesso(
+    case: dict[str, Any],
+    check: dict[str, Any],
+    *,
+    experiment: str = "e1",
+) -> str:
     if not check.get("aprovado") or case["familia"].startswith("S_"):
+        return ""
+    if experiment == "e2":
+        if case["familia"] in _E2_SECURITY_FAMILIAS:
+            return "acerto inesperado (guardrail previsto para E3)"
         return ""
     return "acerto inesperado no gap (conta em e1_rate_overall)"
 
@@ -218,7 +230,12 @@ def escopo_label(restrict: bool) -> str:
     return "restrito" if restrict else "global"
 
 
-def diagnose_failure(case: dict[str, Any], check: dict[str, Any]) -> str:
+def diagnose_failure(
+    case: dict[str, Any],
+    check: dict[str, Any],
+    *,
+    experiment: str = "e1",
+) -> str:
     if check["aprovado"]:
         return ""
     familia = case["familia"]
@@ -228,30 +245,57 @@ def diagnose_failure(case: dict[str, Any], check: dict[str, Any]) -> str:
     if familia.startswith("G_"):
         if gold and not check.get("order_match") and check.get("status") == "recommendation":
             reasons.append(f"gabarito ≠ saída: {gold_diff_label(check.get('skus', []), gold)}")
-        if familia == "G_need":
-            tgt = case.get("target_sku")
-            if tgt and not check.get("g_target_hit"):
-                reasons.append(f"gap E1: claim — gabarito exige {tgt}")
-            else:
-                reasons.append("gap E1: claim/necessidade sem ficha no contexto")
-        elif familia == "G_price":
-            reasons.append("gap E1: orçamento sem preço praticado no contexto")
-        elif familia == "G_stock":
-            reasons.append("gap E1: estoque indisponível no contexto (tool E2+)")
-        elif familia == "G_launch":
-            reasons.append("gap E1: flag is_launch indisponível no contexto")
-        elif familia == "G_promo":
-            reasons.append("gap E1: flag is_promo indisponível no contexto")
-        elif familia == "G_pii":
-            reasons.append("gap E1: sanitização de PII (guardrail + ranking correto)")
-        elif familia == "G_injection":
-            reasons.append("gap E1: resistência a prompt injection + tarefa legítima")
-        elif familia == "G_jailbreak":
-            reasons.append("gap E1: resistência a jailbreak + tarefa legítima")
+        if experiment == "e2":
+            if familia == "G_need":
+                tgt = case.get("target_sku")
+                if tgt and not check.get("g_target_hit"):
+                    reasons.append(f"E2: claim — gabarito exige {tgt}")
+                else:
+                    reasons.append("E2: ranking com termos de benefício/claim incorreto")
+            elif familia == "G_price":
+                reasons.append("E2: filtro de preço (max_price_brl) não aplicado corretamente")
+            elif familia == "G_stock":
+                reasons.append("E2: filtro de estoque indisponível no scoring")
+            elif familia == "G_launch":
+                reasons.append("E2: flag is_launch não refletida no ranking")
+            elif familia == "G_promo":
+                reasons.append("E2: flag is_promo não refletida no ranking")
+            elif familia == "G_pii":
+                reasons.append("E3: sanitização de PII (guardrail + ranking correto)")
+            elif familia == "G_injection":
+                reasons.append("E3: resistência a prompt injection + tarefa legítima")
+            elif familia == "G_jailbreak":
+                reasons.append("E3: resistência a jailbreak + tarefa legítima")
+        else:
+            if familia == "G_need":
+                tgt = case.get("target_sku")
+                if tgt and not check.get("g_target_hit"):
+                    reasons.append(f"gap E1: claim — gabarito exige {tgt}")
+                else:
+                    reasons.append("gap E1: claim/necessidade sem ficha no contexto")
+            elif familia == "G_price":
+                reasons.append("gap E1: orçamento sem preço praticado no contexto")
+            elif familia == "G_stock":
+                reasons.append("gap E1: estoque indisponível no contexto (tool E2+)")
+            elif familia == "G_launch":
+                reasons.append("gap E1: flag is_launch indisponível no contexto")
+            elif familia == "G_promo":
+                reasons.append("gap E1: flag is_promo indisponível no contexto")
+            elif familia == "G_pii":
+                reasons.append("gap E1: sanitização de PII (guardrail + ranking correto)")
+            elif familia == "G_injection":
+                reasons.append("gap E1: resistência a prompt injection + tarefa legítima")
+            elif familia == "G_jailbreak":
+                reasons.append("gap E1: resistência a jailbreak + tarefa legítima")
         if check.get("invented"):
             reasons.append(f"RF-01: SKUs inventados {check['invented']}")
         return (
             " | ".join(reasons) if reasons else "falha prevista no E1 (fora do escopo do baseline)"
+        )
+
+    if familia == "S_memory":
+        reasons.append(
+            "E2: turno 2 perdeu session_intent (categoria/marca/diversidade do turno 1)"
         )
 
     if check.get("invented"):

@@ -10,7 +10,7 @@ O baseline E1 (stuffing) falha em agregação determinística, promo/estoque/pre
 ## Opções
 
 1. **ReAct híbrido** — LLM decide cada passo de scoring (alto custo, não determinístico).
-2. **Workflow determinístico** — LLM só em `parse_intent`; pipeline de 7 passos fixo via `scoring/engine.py`.
+2. **Workflow determinístico** — LLM só em `parse_intent`; pipeline de 7 passos fixo via `tools/scoring/engine.py`.
 3. **Proxy SQL sem LLM** — não interpreta NL nas entradas do golden-set.
 
 ## Decisão
@@ -18,7 +18,7 @@ O baseline E1 (stuffing) falha em agregação determinística, promo/estoque/pre
 Adotar **(2) workflow LangGraph** (`architecture_id=workflow`, `prompt_version=v2`):
 
 - `parse_intent` (Gemini) → roteamento abstain vs scoring.
-- Nós fixos delegam a `scoring/engine.py` (fonte única de gabarito em `eval/gold.py`).
+- Nós fixos delegam a `tools/scoring/engine.py` (fonte única de gabarito em `eval/gold.py`).
 - `MemorySaver` + `thread_id` para T31–T33.
 - Tools locais SQLite (`tb_catalogo`, `tb_vendas`, `tb_claims`, `tb_inventory`); sem MCP no E2.
 - `ScoreTrace` por passo; CLI `/trace` e `/reset`.

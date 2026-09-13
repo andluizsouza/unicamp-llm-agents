@@ -12,8 +12,8 @@ from recfair.data.catalog import (
 )
 from recfair.data.claims import claims_records
 from recfair.data.inventory import INVENTORY_SNAPSHOT_DATE, inventory_by_sku
-from recfair.scoring.intent import ParsedIntent
-from recfair.scoring.trace import ScoreTrace
+from recfair.schemas.intent import ParsedIntent
+from recfair.tools.scoring.trace import ScoreTrace
 
 _CATALOG = catalog_by_sku()
 _SALES = generate_sales()

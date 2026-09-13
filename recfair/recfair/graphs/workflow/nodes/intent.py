@@ -8,10 +8,10 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel, Field
 
 from recfair.config import TEMPERATURE, model_version, sampling_fixed_by_model
-from recfair.graphs.state import WorkflowState
+from recfair.graphs.workflow.state import WorkflowState
 from recfair.observability.tokens import usage_from_response
 from recfair.prompts.workflow_v2 import build_intent_prompt
-from recfair.scoring.intent import ParsedIntent
+from recfair.schemas.intent import ParsedIntent
 
 _LLM: ChatGoogleGenerativeAI | None = None
 _STRUCTURED: Any = None

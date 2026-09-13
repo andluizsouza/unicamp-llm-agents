@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from recfair.scoring.intent import ParsedIntent
+from recfair.schemas.intent import ParsedIntent
 
 _CLAIM_PATTERNS: list[tuple[str, list[str]]] = [
     (r"anticaspa", ["anticaspa"]),

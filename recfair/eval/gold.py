@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from eval.case_intent import intent_from_case
 from recfair.data.catalog import catalog_by_sku, generate_sales
-from recfair.scoring.case_intent import intent_from_case
-from recfair.scoring.engine import score_recommendation
+from recfair.tools.scoring.engine import score_recommendation
 
 _SALES_ROWS = generate_sales()
 _CATALOG = catalog_by_sku()
@@ -33,7 +33,7 @@ def gold_for(case: dict[str, Any]) -> list[str]:
 
 def gold_for_price_cap(case: dict[str, Any], max_brl: float) -> list[str]:
     """Top-N with price cap — delegates to scoring engine."""
-    from recfair.scoring.intent import ParsedIntent
+    from recfair.schemas.intent import ParsedIntent
 
     intent = ParsedIntent(
         category=case.get("category"),

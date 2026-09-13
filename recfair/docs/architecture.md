@@ -16,7 +16,17 @@ flowchart TD
     sqlite[(tb_catalogo + tb_vendas + tb_claims + tb_inventory)] --> score
 ```
 
-O motor `recfair/scoring/engine.py` é a **fonte de verdade** do gabarito (`eval/gold.py` delega ao engine). Baseline E1 permanece executável e é **reexecutado** na mesma régua para comparação.
+O motor `recfair/tools/scoring/engine.py` é a **fonte de verdade** do gabarito (`eval/gold.py` delega ao engine). Baseline E1 permanece executável e é **reexecutado** na mesma régua para comparação.
+
+## Layout do pacote
+
+| Camada | Caminho | Papel |
+| :--- | :--- | :--- |
+| Contratos | `schemas/` | `RecFairOutput`, `ParsedIntent` |
+| Tools | `tools/scoring/` | Pipeline determinístico invocado pelos nós |
+| Arquitetura simples | `graphs/baseline.py` | Runner monolítico (E1) |
+| Arquitetura com grafo | `graphs/workflow/` | `state.py`, `nodes/`, montagem LangGraph |
+| Entrada | `graphs/registry.py` | `architecture_id` → `run()` |
 
 ### Pipeline de scoring (determinístico)
 

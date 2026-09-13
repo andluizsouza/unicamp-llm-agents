@@ -71,6 +71,8 @@ def _run_case(runner: Any, case: dict[str, Any], arch_id: str) -> tuple[Any, Any
     turns = case.get("turns")
     if turns:
         tid = case["id"] if arch_id == workflow.architecture_id() else None
+        if tid:
+            workflow.reset_checkpoint(tid)
         output = None
         metrics = None
         for turn in turns:
@@ -83,11 +85,17 @@ def _run_case(runner: Any, case: dict[str, Any], arch_id: str) -> tuple[Any, Any
     return runner(case["entrada"])
 
 
-def run_eval(arch: str | None = "baseline", *, persist: bool = True) -> dict[str, Any]:
+def run_eval(
+    arch: str | None = "baseline",
+    *,
+    persist: bool = True,
+    experiment: str | None = None,
+) -> dict[str, Any]:
     """Execute all golden cases and return run manifest."""
     apply_dotenv()
     ensure_google_api_key()
     arch_id, runner = get_runner(arch)
+    exp = experiment or ("e2" if arch_id == workflow.architecture_id() else "e1")
     cases = load_cases()
     revision = golden_revision(cases)
     run_id = new_run_id()
@@ -104,7 +112,8 @@ def run_eval(arch: str | None = "baseline", *, persist: bool = True) -> dict[str
                 "metrics": asdict(metrics),
                 "check": check,
                 "status": final_status(check["aprovado"], restrict),
-                "motivo": motivo_sucesso(case, check) or diagnose_failure(case, check),
+                "motivo": motivo_sucesso(case, check, experiment=exp)
+                or diagnose_failure(case, check, experiment=exp),
             }
         )
 

@@ -6,9 +6,9 @@ from typing import Any
 
 from recfair.config import N_RECOMMEND
 from recfair.data.catalog import catalog_by_sku, generate_sales, units_in_window
-from recfair.graphs.state import WorkflowState
+from recfair.graphs.workflow.state import WorkflowState
 from recfair.schemas.output import RecFairOutput, RecommendationItem
-from recfair.scoring.engine import score_recommendation
+from recfair.tools.scoring.engine import score_recommendation
 
 
 def scoring_node(state: WorkflowState) -> dict[str, Any]:

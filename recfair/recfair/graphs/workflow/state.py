@@ -7,7 +7,7 @@ from typing import Annotated, Any
 from langgraph.graph.message import add_messages
 from typing_extensions import TypedDict
 
-from recfair.scoring.intent import ParsedIntent
+from recfair.schemas.intent import ParsedIntent
 
 
 class WorkflowState(TypedDict, total=False):

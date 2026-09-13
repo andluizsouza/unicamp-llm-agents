@@ -22,6 +22,7 @@ def build_results_table(
     records: list[dict[str, Any]],
     *,
     output_column: str = "baseline",
+    experiment: str = "e1",
 ) -> pd.DataFrame:
     """Build per-case comparison table from runner records."""
     rows = []
@@ -29,7 +30,9 @@ def build_results_table(
         case = rec["case"]
         check = rec["check"]
         restrict = is_restrict_scope(case["familia"])
-        motivo = motivo_sucesso(case, check) or diagnose_failure(case, check)
+        motivo = motivo_sucesso(case, check, experiment=experiment) or diagnose_failure(
+            case, check, experiment=experiment
+        )
         status = final_status(check["aprovado"], restrict)
         rows.append(
             {

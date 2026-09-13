@@ -10,9 +10,9 @@ from typing import Any
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 
-from recfair.graphs.nodes.intent import parse_intent_node, route_after_intent
-from recfair.graphs.nodes.scoring_workflow import abstain_node, scoring_node, synthesize_node
-from recfair.graphs.state import WorkflowState
+from recfair.graphs.workflow.nodes.intent import parse_intent_node, route_after_intent
+from recfair.graphs.workflow.nodes.scoring import abstain_node, scoring_node, synthesize_node
+from recfair.graphs.workflow.state import WorkflowState
 from recfair.prompts.workflow_v2 import PROMPT_VERSION
 from recfair.schemas.output import RecFairOutput
 
@@ -77,6 +77,8 @@ def run(query: str, thread_id: str | None = None) -> tuple[RecFairOutput, CaseMe
     compiled = build_graph()
     tid = thread_id or str(uuid.uuid4())
     config = {"configurable": {"thread_id": tid}, "recursion_limit": _RECURSION_LIMIT}
+    # Do not pass session_intent on invoke: LangGraph merges input with the
+    # checkpoint and an empty dict wipes persisted session memory on turn 2+.
     initial: WorkflowState = {
         "query": query,
         "thread_id": tid,
@@ -85,7 +87,6 @@ def run(query: str, thread_id: str | None = None) -> tuple[RecFairOutput, CaseMe
         "tokens_saida": 0,
         "tool_calls": 0,
         "step": 0,
-        "session_intent": {},
     }
     start = time.perf_counter()
     try:
