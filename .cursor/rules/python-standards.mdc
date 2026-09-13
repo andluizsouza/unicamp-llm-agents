@@ -1,6 +1,6 @@
 ---
 description: Padrões Python de sistemas multiagente (PEP 8/257, tipos, SOLID)
-globs: src/**/*.py, tests/**/*.py
+globs: **/*.py
 alwaysApply: false
 ---
 

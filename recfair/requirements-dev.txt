@@ -1,0 +1,6 @@
+# Desenvolvimento, notebooks e UI — instale com `make install-dev`
+-r requirements.txt
+ruff>=0.9
+jupyter>=1.1
+pandas>=2.2
+matplotlib>=3.9

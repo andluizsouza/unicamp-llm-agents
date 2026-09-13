@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "recfair"
+version = "0.1.0"
+description = "RecFair — recommendation with fairness audit (E1 baseline)"
+readme = "README.md"
+requires-python = ">=3.14"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["recfair*", "eval*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+exclude = ["eval/notebooks"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"recfair/data/catalog.py" = ["E501"]
+"recfair/prompts/*.py" = ["E501"]
+"eval/report.py" = ["E501", "E731"]
+"eval/verify.py" = ["E501"]

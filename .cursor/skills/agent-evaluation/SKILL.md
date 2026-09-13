@@ -11,7 +11,7 @@ description: >-
 
 ## Onde corre a eval
 
-A medição é código do pacote (`src/<package>/eval/`), disparada por CLI (`make eval ARCH=...`). O notebook **não** reimplementa verify, métricas nem o agente: importa e chama, ou lê `eval/runs/*.json` gerados pelo CLI.
+A medição é código do pacote `eval/` (na raiz do app). O **notebook** chama `eval.runner.run_eval` — não há `make eval`. O notebook **não** reimplementa verify, métricas nem o agente: importa e chama. Artefatos em `eval/runs/*.json` quando `persist=True`.
 
 ## Golden-set
 

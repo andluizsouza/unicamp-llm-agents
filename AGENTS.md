@@ -7,7 +7,7 @@ Este arquivo é o **índice e o contrato** do toolkit versionado em `.cursor/`. 
 | **Agente de IA** | Trate as seções *Contrato* e *Como aplicar* como obrigatórias. Antes de implementar, **leia a skill** da tabela *Roteiro*. Delegue o subagent quando a tarefa for review/especialista. |
 | **Dev humano** | Use como mapa do que existe, quando dispara, e onde está o detalhe. As instruções longas estão nas skills, não aqui. |
 
-Nada neste toolkit é código da aplicação. O software (quando existir) vive no diretório do `pyproject.toml` (`src/`, CLI, `docs/`, `eval/`). Este repositório também pode conter material de curso fora desse pacote — **não misture** os dois.
+Nada neste toolkit é código da aplicação. O software (quando existir) vive no diretório do app (pacote runtime, pacote `eval/`, CLI, `docs/`, `data/`, `requirements.txt`). Este repositório também pode conter material de curso fora desse pacote — **não misture** os dois.
 
 ---
 
@@ -26,7 +26,7 @@ AGENTS.md                 ← você está aqui (contrato + índice)
 | **Skill** (`SKILL.md` + anexos) | Procedimento e templates | Agente: pela `description` da skill, ou quando este arquivo manda ler |
 | **Subagent** (`.cursor/agents/*.md`) | Especialista em contexto separado | Agente principal: *use proactively* na description, ou o humano pede pelo nome |
 
-Não edite uma rule para caber um playbook inteiro — isso é skill. Não copie o domínio do projeto (métricas, dataset) para este toolkit: cada produto define isso em `data/` e `src/<package>/eval/`.
+Não edite uma rule para caber um playbook inteiro — isso é skill. Não copie o domínio do projeto (métricas, dataset) para este toolkit: cada produto define isso em `data/` e no pacote `eval/`.
 
 ---
 
@@ -40,9 +40,9 @@ Não edite uma rule para caber um playbook inteiro — isso é skill. Não copie
 
 ### Sistema vs notebook
 
-- O **sistema** é um pacote Python **CLI** (Poetry, Makefile, `src/`). Harness, grafos, tools, memória, verify e métricas **não** vivem em notebook.
+- O **sistema** é um pacote Python **CLI** (`venv` + `pip`, Makefile). Runtime no pacote do app; grafos, registry, tools e memória **não** vivem em notebook. Verify e `run_eval` no pacote `eval/`.
 - Notebooks são **documentação** (Markdown da entrega) e **relatório**: importam o pacote e chamam funções/CLI. Célula não implementa agente, tool, grafo nem métrica.
-- Python **3.14**, dependências com **Poetry** (`pyproject.toml` + `poetry.lock` commitado).
+- Python **3.14**, dependências com **`requirements.txt`** (+ `requirements-dev.txt` quando houver grupos extras). Ambiente virtual `venv-<app>/` (não commitar).
 - Sem chaves de API em git, notebook, código ou prompt versionado. Só `.env` (ignorado) e `.env.example`.
 - Efeitos irreversíveis: humano no loop.
 
@@ -50,7 +50,7 @@ Não edite uma rule para caber um playbook inteiro — isso é skill. Não copie
 
 - Comece pelo baseline mais simples que resolve a tarefa.
 - Prompt, tools, RAG, MCP, grafos (LangGraph) e multiagente são **peças sem ordem fixa**.
-- O **default do CLI** (`make chat`, `make eval`) é a arquitetura do **incremento vigente**. Baseline sempre executável: `ARCH=baseline`.
+- O **default do CLI** (`make chat`) é a arquitetura do **incremento vigente**. Golden-set via notebook (`eval.runner.run_eval`). Baseline sempre executável: `ARCH=baseline`.
 - Empate ou piora no eval é resultado **válido** (relatar com hipótese). Não apaga a versão vigente. Peças **além** do incremento só entram com limitação medida.
 - Cada arquitetura: `id` + **data** (ISO) + ADR. Comparar versões: **mesmo modelo**, mesmo ambiente, baseline **reexecutado** na mesma sessão.
 
@@ -73,8 +73,8 @@ Injeção automática. O agente **não precisa abrir** o arquivo para elas valer
 
 | Arquivo | Disparo | Função |
 | :--- | :--- | :--- |
-| [`multi-agent-core.mdc`](.cursor/rules/multi-agent-core.mdc) | **Sempre** (`alwaysApply`) | Espelho curto deste contrato: CLI vs notebook, evolução, golden-set, Poetry 3.14, idioma, lista de skills |
-| [`python-standards.mdc`](.cursor/rules/python-standards.mdc) | `src/**/*.py`, `tests/**/*.py` | PEP 8, tipos, SOLID, nós puros, tools com schema, sem lógica em notebook |
+| [`multi-agent-core.mdc`](.cursor/rules/multi-agent-core.mdc) | **Sempre** (`alwaysApply`) | Espelho curto deste contrato: CLI vs notebook, evolução, golden-set, Python 3.14 + venv, idioma, lista de skills |
+| [`python-standards.mdc`](.cursor/rules/python-standards.mdc) | `<package>/**/*.py`, `eval/**/*.py` | PEP 8, tipos, SOLID, nós puros, tools com schema, sem lógica em notebook |
 | [`eval-notebooks.mdc`](.cursor/rules/eval-notebooks.mdc) | `eval/**/*.ipynb`, `**/notebooks/**/*.ipynb`, `**/*eval*.ipynb`, `E*.ipynb` | Notebook = relatório; estrutura herdada por import; mesmo modelo; hash do golden-set |
 | [`architecture-docs.mdc`](.cursor/rules/architecture-docs.mdc) | `docs/**/*.md` | ADR datado em mudança de arquitetura; `docs/architecture.md` = desenho **atual** |
 
@@ -88,7 +88,7 @@ Playbooks. **Leia o `SKILL.md` (e o anexo citado) antes de implementar** a taref
 
 ### `multi-agent-patterns`
 
-Arquitetura, harness, tools, RAG, MCP, LangGraph, memória.
+Arquitetura, registry de grafos, tools, RAG, MCP, LangGraph, memória.
 
 | Arquivo | Conteúdo |
 | :--- | :--- |
@@ -102,7 +102,7 @@ Qualidade do código Python do pacote.
 
 | Arquivo | Conteúdo |
 | :--- | :--- |
-| [`SKILL.md`](.cursor/skills/python-agent-quality/SKILL.md) | Python 3.14, mapa de módulos, SOLID, refactor, erros, testes; notebook não é módulo |
+| [`SKILL.md`](.cursor/skills/python-agent-quality/SKILL.md) | Python 3.14, mapa de módulos, SOLID, refactor, erros; notebook não é módulo |
 | [`STANDARDS.md`](.cursor/skills/python-agent-quality/STANDARDS.md) | Exemplos: port/adapter, schema de tool, docstring Google, anti-padrão |
 
 ### `agent-evaluation`
@@ -118,13 +118,13 @@ Golden-set, runner no pacote, comparação, notebooks que só invocam.
 
 ### `project-ops`
 
-Esqueleto, Poetry, Makefile, CLI, README de experimentos.
+Esqueleto, venv/pip, Makefile, CLI, README de experimentos.
 
 | Arquivo | Conteúdo |
 | :--- | :--- |
 | [`SKILL.md`](.cursor/skills/project-ops/SKILL.md) | Fonte da verdade, grupos de deps, UI Rich, checklist de bootstrap |
-| [`layout.md`](.cursor/skills/project-ops/layout.md) | Árvore canônica `src/<package>/`, `data/golden/`, `eval/`, `docs/adr/` |
-| [`makefile-spec.md`](.cursor/skills/project-ops/makefile-spec.md) | Alvos `install`, `install-dev`, `lock`, `lint`, `test`, `eval`, `chat`, `ingest`, `mcp` |
+| [`layout.md`](.cursor/skills/project-ops/layout.md) | Árvore canônica `<package>/` + `eval/`, `data/golden/`, `docs/adr/` |
+| [`makefile-spec.md`](.cursor/skills/project-ops/makefile-spec.md) | Alvos `install`, `install-dev`, `kernel`, `lint`, `format`, `chat`, `data` |
 
 ### `architecture-adrs`
 
@@ -145,7 +145,7 @@ Contexto isolado. O agente principal **deve delegar** nestes gatilhos (e o human
 | :--- | :--- | :--- |
 | `architecture-guardian` | [`architecture-guardian.md`](.cursor/agents/architecture-guardian.md) | Novo agente, tool, RAG, MCP, grafo, memória; promoção; review se a peça extra tem evidência; recusar lógica de sistema em notebook |
 | `eval-engineer` | [`eval-engineer.md`](.cursor/agents/eval-engineer.md) | Criar/alterar golden-set, runner, notebook de relatório; interpretar comparação; não inventar métricas |
-| `python-quality` | [`python-quality.md`](.cursor/agents/python-quality.md) | Depois de escrever ou alterar `.py`: PEP, SOLID, testes; 🔴 se o sistema estiver no notebook |
+| `python-quality` | [`python-quality.md`](.cursor/agents/python-quality.md) | Depois de escrever ou alterar `.py`: PEP, SOLID; 🔴 se o sistema estiver no notebook |
 
 Feedback do `python-quality`: 🔴 critical · 🟡 should fix · 🟢 nice.
 
@@ -158,7 +158,7 @@ O agente segue esta tabela **antes** de gerar código. O humano usa a mesma tabe
 | Tarefa | Ler | Delegar |
 | :--- | :--- | :--- |
 | Criar esqueleto, deps, Makefile, CLI, README | `project-ops` (+ `layout.md`, `makefile-spec.md`) | — |
-| Baseline, tools, RAG, MCP, grafo, memória, harness | `multi-agent-patterns` (+ `gates.md`; `langgraph.md` se houver grafo) | `architecture-guardian` |
+| Baseline, tools, RAG, MCP, grafo, memória, registry | `multi-agent-patterns` (+ `gates.md`; `langgraph.md` se houver grafo) | `architecture-guardian` |
 | ADR / mapa `docs/architecture.md` | `architecture-adrs` (+ `adr-template.md`) | `architecture-guardian` |
 | Escrever ou refatorar Python | `python-agent-quality` (+ `STANDARDS.md`) | `python-quality` (depois) |
 | Golden-set, runner, comparação, notebook de entrega | `agent-evaluation` (+ `notebook-template.md`) | `eval-engineer` |
@@ -173,7 +173,7 @@ O agente segue esta tabela **antes** de gerar código. O humano usa a mesma tabe
 Use o architecture-guardian para revisar se cabe um supervisor.
 Use o eval-engineer para acrescentar casos e reexecutar o baseline.
 Use o python-quality neste diff.
-Siga a skill project-ops e crie o esqueleto Poetry.
+Siga a skill project-ops e crie o esqueleto com venv + requirements.txt.
 ```
 
 ---
@@ -184,15 +184,14 @@ Detalhe normativo: skill `project-ops`. Resumo:
 
 | Comando | Efeito |
 | :--- | :--- |
-| `make install` / `make install-dev` | Poetry (runtime / + dev,eval,ui) |
+| `make install` / `make install-dev` | pip (`requirements.txt` / `requirements-dev.txt`) |
+| `make kernel` | kernel Jupyter para notebooks |
 | `make chat` | UI no terminal — **arquitetura vigente** |
 | `make chat ARCH=baseline` | Mesma UI, baseline |
-| `make eval` | Golden-set na vigente |
-| `make eval ARCH=baseline` | Golden-set no baseline (obrigatório em toda comparação) |
-| `make lint` `make test` | Qualidade |
-| `make ingest` / `make mcp` | Só se a peça existir |
+| `make lint` / `make format` | Qualidade (ruff) |
+| Golden-set | notebook chama `eval.runner.run_eval` (não há `make eval`) |
 
-O README do app mapeia **cada experimento do notebook** para um desses comandos (entrega CLI / zip).
+O README mapeia **cada experimento** a `make chat` ou ao notebook de relatório.
 
 ---
 

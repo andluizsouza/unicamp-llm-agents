@@ -1,0 +1,108 @@
+# Guia de instalação — RecFair
+
+Este projeto usa **Python 3.14** nativo com `venv` e `pip`. Não é necessário Poetry.
+
+## Pré-requisitos
+
+- Python **3.14** instalado (`python3.14 --version`)
+- `make` (opcional, mas recomendado — os alvos encapsulam os comandos abaixo)
+
+## 1. Clonar e entrar no app
+
+```bash
+cd recfair
+```
+
+## 2. Criar e ativar o ambiente virtual
+
+```bash
+python3.14 -m venv venv-recfair
+source venv-recfair/bin/activate
+```
+
+No Windows (PowerShell):
+
+```powershell
+python3.14 -m venv venv-recfair
+.\venv-recfair\Scripts\Activate.ps1
+```
+
+## 3. Instalar dependências
+
+**Desenvolvimento completo** (runtime + notebooks + UI):
+
+```bash
+make install-dev
+```
+
+Equivalente manual:
+
+```bash
+pip install --upgrade pip
+pip install -r requirements-dev.txt
+pip install -e .
+```
+
+**Somente runtime** (CLI, sem Jupyter):
+
+```bash
+make install
+```
+
+Equivalente manual:
+
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt
+pip install -e .
+```
+
+O `pip install -e .` registra os pacotes `recfair` e `eval` em modo editável.
+
+## 4. Variáveis de ambiente
+
+```bash
+cp .env.example .env
+```
+
+Edite `.env` e defina `GOOGLE_API_KEY` (ou `GEMINI_API_KEY`).
+
+## 5. Cursor / VS Code e notebooks
+
+```bash
+make kernel
+```
+
+Isso registra o kernel Jupyter **Python (recfair)**. O interpretador padrão está em `.vscode/settings.json` (`venv-recfair/bin/python`).
+
+Depois:
+
+1. Abra a pasta `recfair/` como workspace.
+2. **Developer: Reload Window** no Command Palette (se necessário).
+3. No notebook, selecione o kernel **Python (recfair)**.
+
+## 6. Verificar instalação
+
+```bash
+make chat ARCH=baseline   # requer GOOGLE_API_KEY
+```
+
+Resultados do golden-set: execute o notebook `eval/notebooks/E1_baseline_report.ipynb`.
+
+## Arquivos de dependências
+
+| Arquivo | Conteúdo |
+| :--- | :--- |
+| `requirements.txt` | Runtime: langchain, langchain-google-genai, pydantic, rich |
+| `requirements-dev.txt` | Inclui runtime + ruff, jupyter, pandas, matplotlib |
+
+Bounds versionados nos arquivos; para pin exato de todas as transitivas, use `pip freeze > requirements.lock` localmente (não versionado por padrão).
+
+## Solução de problemas
+
+| Sintoma | Ação |
+| :--- | :--- |
+| `python3.14: command not found` | Instale Python 3.14 ou ajuste o comando para o binário disponível no sistema |
+| `make: python3.14: No such file` | Crie o venv manualmente com o binário correto e use `VENV=venv-recfair make install-dev` |
+| Notebook sem kernel | `make install-dev && make kernel`, depois recarregue a janela |
+| `ModuleNotFoundError: recfair` | Ative o venv e rode `pip install -e .` |

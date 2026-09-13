@@ -49,7 +49,7 @@ Atualize no mesmo conjunto de mudanças da promoção. Deve responder:
 
 - Arquitetura vigente (default do CLI): `id`, **data**, peças ligadas.
 - Diagrama mermaid do fluxo **que existe no código**.
-- Como executar: `make chat` / `make eval` / `ARCH=baseline`.
+- Como executar: `make chat` / `ARCH=baseline`; golden-set no notebook (`run_eval`).
 - Contratos de entrada/saída (estáveis entre versões).
 - Hard-stops e human-in-the-loop.
 - O que deliberadamente **não** está no sistema.

@@ -1,0 +1,9 @@
+{
+  "python.defaultInterpreterPath": "/home/anderson/Documents/Data-Science/LLM Courses/Unicamp-LLM-Agents/recfair/venv-recfair/bin/python",
+  "python.venvPath": "/home/anderson/Documents/Data-Science/LLM Courses/Unicamp-LLM-Agents/recfair/venv-recfair",
+  "python.venvFolders": [
+    "recfair/.venv"
+  ],
+  "python.terminal.activateEnvironment": true,
+  "jupyter.jupyterServerType": "local"
+}

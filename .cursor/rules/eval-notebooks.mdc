@@ -6,9 +6,9 @@ alwaysApply: false
 
 # Notebooks
 
-- São **relatórios e documentação**, não o sistema. Proibido definir grafo, tool, harness, cliente LLM ou função de métrica numa célula.
-- Permitido: Markdown exigido pela entrega; `import` do pacote; chamadas a `eval.runner` / funções públicas; exibir tabelas e figuras já produzidas pelo CLI.
+- São **relatórios e documentação**, não o sistema. Proibido definir grafo, tool, registry, cliente LLM ou função de métrica numa célula.
+- Permitido: Markdown exigido pela entrega; `import` do pacote; chamadas a `eval.runner.run_eval` / funções públicas; exibir tabelas e figuras.
 - Abra com um bloco de **estrutura herdada** importada (esquema de saída, golden-set, verify, registro de run) — sem copiar código do baseline.
-- Mesmo modelo e ambiente nas versões comparadas. Baseline reexecutado nesta sessão (ou `make eval ARCH=baseline` cujas saídas o notebook carrega).
+- Mesmo modelo e ambiente nas versões comparadas. Baseline reexecutado nesta sessão via `run_eval` no notebook.
 - Golden-set versionado + hash. Casos novos só por acréscimo; correção só se defeito real, com registro.
 - Saídas visíveis, sem chaves. Skill: `agent-evaluation`. Delegar: `eval-engineer`.

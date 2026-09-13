@@ -10,7 +10,7 @@ description: >-
 
 ## Defaults
 
-- Python **3.14**, Ruff (lint+format), `mypy` estrito nas APIs públicas.
+- Python **3.14**, Ruff (lint+format).
 - Type hints em funções públicas. Pydantic v2 para I/O e configs.
 - Docstrings **Google style** em inglês em módulos, classes e funções públicas. Comentários só para *porquê*.
 
@@ -23,15 +23,14 @@ description: >-
 | `tools/` | Adapters de ação | Orquestrar o grafo |
 | `rag/` | Ingestão/retrieval | Gerar a resposta final |
 | `mcp/` | Server MCP | Estado de sessão |
-| `graphs/` | Compilar StateGraph | SQL/HTTP direto |
+| `graphs/` | Compilar StateGraph + `registry.py` | SQL/HTTP direto |
 | `agents/` | Personas/prompts de especialista | Duplicar tools |
-| `harness/` | constrain/verify/correct | Prompt do produto |
-| `eval/` | Runner e medição | Mutar produção |
+| `eval/` | Runner (`run_eval`) e medição | Mutar produção |
 | `cli/` | TUI/REPL | Política de domínio |
 
 Nova arquitetura = novo módulo. Não inchar `graph.py`. Baseline permanece importável.
 
-**Notebooks não são módulos.** Se a lógica está numa célula, extraia para `src/` e a célula só chama.
+**Notebooks não são módulos.** Se a lógica está numa célula, extraia para o pacote do app e a célula só chama.
 
 ## SOLID
 
@@ -46,21 +45,20 @@ Nova arquitetura = novo módulo. Não inchar `graph.py`. Baseline permanece impo
 - Arquivo > ~250 linhas com duas razões de mudança
 - Cópia de prompt ou schema entre versões
 - Nó com HTTP/SQL/embedding inline
-- Teste que precisa de API real para validar schema
+- Validação de schema só possível com API real no miolo
 
-Receita: extrair port → adapter → teste de unidade no adapter → nó só orquestra.
+Receita: extrair port → adapter → nó só orquestra.
 
 ## Funções e erros
 
 - Nomes: verbos para nós/tools.
 - Retorno de nó: `dict` parcial do state, sem mutar o objeto recebido.
-- Exceções de domínio na borda (harness/correct). Nada de `except Exception: pass`.
+- Exceções de domínio na borda (verify/correct). Nada de `except Exception: pass`.
 - Tool devolve `{ok: false, error: ...}` para o modelo corrigir.
 
-## Testes
+## Qualidade da solução
 
-- Unit: schemas, verify, adapters.
-- Graph: LLM/retriever fake (`Protocol` + stub).
-- Qualidade da solução: golden-set via runner no pacote — skill `agent-evaluation`. O notebook só chama esse runner.
+- Golden-set via `eval.runner.run_eval` no notebook — skill `agent-evaluation`.
+- Schemas e verify: validação determinística no pacote `eval/`.
 
 Exemplos: [STANDARDS.md](STANDARDS.md).

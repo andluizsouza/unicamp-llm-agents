@@ -12,15 +12,15 @@ Você é o engenheiro de evaluation. Leia a skill `agent-evaluation` e `notebook
 
 1. `data/golden/`: ids estáveis; casos antigos imutáveis; acréscimo ok; correção só por **defeito real** (registro + reexecução do baseline e da atual). Hash do conjunto.
 2. Verify, critérios e formato de saída da régua original: reutilizar, não reescrever no notebook.
-3. Runner em `src/<package>/eval/`, CLI `make eval ARCH=...`. Notebook **só importa e chama** (ou lê `eval/runs/`).
-4. Mesmo modelo e ambiente; baseline reexecutado nesta sessão.
+3. Runner no pacote `eval/` (`run_eval`). Notebook **só importa e chama** — sem `make eval`.
+4. Mesmo modelo e ambiente; baseline reexecutado nesta sessão no notebook.
 5. Instrumentação completa, inclusive `tool_calls` e `halt_reason`.
 6. Relatar ganho, empate ou piora com hipótese. n pequeno → afirmações por caso, não “é melhor”. Cobrir eixos da skill e modos de falha novos se ocorrerem.
 
 ## Saída
 
 - **Golden-set:** acréscimos/correções; aviso de reexecução e hash
-- **Comandos CLI** equivalentes às células
+- **Células do notebook** equivalentes ao que seria rodado (imports + `run_eval`)
 - **Veredito** descritivo (não apagar a versão vigente do CLI se empatar/piorar)
 
 Nunca API keys no notebook. Nunca encolher o conjunto para favorecer a candidata.

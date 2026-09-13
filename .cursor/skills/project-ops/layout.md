@@ -1,46 +1,51 @@
 # Layout canônico
 
-`<app>/` é o diretório do `pyproject.toml`. `<package>` é o nome em `src/`.
+`<app>/` é o diretório do `requirements.txt`. O runtime vive no pacote `<package>/` na raiz do app (sem `src/` obrigatório). A medição vive no pacote `eval/` na mesma raiz.
 
 ```
 <app>/
-├── pyproject.toml
-├── poetry.lock
+├── requirements.txt
+├── requirements-dev.txt
+├── pyproject.toml          # setuptools + ruff
 ├── Makefile
 ├── langgraph.json          # só se houver grafo deployável
 ├── .python-version         # 3.14
 ├── .env.example
-├── README.md               # instalar + experimento → comando
-├── src/<package>/
+├── .vscode/settings.json   # interpretador: ${workspaceFolder}/venv-<app>/bin/python
+├── README.md               # instalar + experimento → comando ou notebook
+├── docs/
+│   ├── INSTALL.md          # guia venv + pip
+│   ├── architecture.md
+│   └── adr/
+├── <package>/              # runtime — import <package>.*
 │   ├── __init__.py
 │   ├── config.py
 │   ├── logging.py
 │   ├── cli.py              # python -m <package>.cli
 │   ├── schemas/            # formato de saída estável entre versões
 │   ├── prompts/
-│   ├── tools/
-│   ├── rag/
-│   ├── mcp/
-│   ├── graphs/             # um módulo por architecture_id, baseline intacto
-│   ├── agents/
-│   ├── harness/
+│   ├── tools/              # quando existir
+│   ├── rag/                # quando existir
+│   ├── mcp/                # quando existir
+│   ├── graphs/             # um módulo por architecture_id + registry.py
+│   ├── agents/             # quando existir
 │   ├── observability/
-│   └── eval/               # runner e verify — importados pelo notebook
-│       ├── runner.py
-│       └── fingerprint.py  # hash do golden-set
-├── data/
-│   └── golden/
-├── eval/
-│   ├── runs/
-│   └── notebooks/          # só relatório (Markdown + chamadas)
-├── docs/
-│   ├── architecture.md
-│   └── adr/
-└── tests/
+│   └── data/               # loaders de dataset (CSV, SQLite)
+├── eval/                   # medição — import eval.*
+│   ├── __init__.py
+│   ├── runner.py           # run_eval() — chamado pelo notebook
+│   ├── verify.py
+│   ├── gold.py
+│   ├── fingerprint.py
+│   ├── report.py
+│   ├── notebooks/          # relatório (Markdown + chamadas)
+│   └── runs/               # JSON por execução
+└── data/
+    └── golden/
 ```
 
-Pacote editável via Poetry.
+Pacote editável via `pip install -e .` (setuptools em `pyproject.toml`).
 
-Pastas de peças ainda não usadas **não** precisam existir.
+Pastas de peças ainda não usadas **não** precisam existir. Sem `tests/`, `scripts/` nem pacote `harness/` separado — registry de arquiteturas em `graphs/registry.py`.
 
-Índices vetoriais locais no `.gitignore`; `make ingest` reconstrói quando RAG existir.
+Índices vetoriais locais no `.gitignore`; alvo `ingest` só quando RAG existir (não é obrigatório no Makefile mínimo).

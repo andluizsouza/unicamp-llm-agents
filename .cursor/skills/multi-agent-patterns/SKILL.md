@@ -2,7 +2,7 @@
 name: multi-agent-patterns
 description: >-
   Define e evolui a arquitetura de um sistema multiagente (prompt, tools, RAG,
-  MCP, LangGraph, harness, memória). Use ao criar agentes, tools, dados de RAG,
+  MCP, LangGraph, registry, memória). Use ao criar agentes, tools, dados de RAG,
   servidores MCP, grafos ou ao promover complexidade.
 ---
 

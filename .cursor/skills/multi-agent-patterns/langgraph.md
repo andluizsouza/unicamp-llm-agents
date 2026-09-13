@@ -26,13 +26,13 @@ Campos de domínio entram neste contrato pelo projeto, não por esta skill.
 ## Módulos
 
 ```
-src/<package>/graphs/
+<package>/graphs/
+  registry.py         # architecture_id -> run/build_graph
   state.py
-  compile.py          # factory: architecture_id -> compiled graph
   <architecture_id>.py
 ```
 
-Cada arquivo de arquitetura expõe `build_graph()`. `compile.py` é o único importado pela CLI. Baseline e versões anteriores continuam compiláveis (`--arch`).
+Cada arquivo de arquitetura expõe `run()` ou `build_graph()`. `registry.py` é o único importado pela CLI. Baseline e versões anteriores continuam compiláveis (`--arch`).
 
 O default da CLI é a arquitetura do **incremento vigente**, não necessariamente a de melhor eval.
 
