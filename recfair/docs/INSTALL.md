@@ -93,8 +93,8 @@ Resultados do golden-set: execute o notebook `eval/notebooks/E1_baseline_report.
 
 | Arquivo | Conteúdo |
 | :--- | :--- |
-| `requirements.txt` | Runtime: langchain, langchain-google-genai, pydantic, rich |
-| `requirements-dev.txt` | Inclui runtime + ruff, jupyter, pandas, matplotlib |
+| `requirements.txt` | Runtime: langchain, langchain-google-genai, pandas, pydantic, rich |
+| `requirements-dev.txt` | Inclui runtime + ruff, jupyter, ipykernel |
 
 Bounds versionados nos arquivos; para pin exato de todas as transitivas, use `pip freeze > requirements.lock` localmente (não versionado por padrão).
 
