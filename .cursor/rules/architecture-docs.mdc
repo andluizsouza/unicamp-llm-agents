@@ -7,6 +7,7 @@ alwaysApply: false
 # Documentação de arquitetura
 
 - Toda mudança de arquitetura (nova técnica, grafo, modelo, armazenamento) vira ADR datado em `docs/adr/NNNN-titulo.md`.
-- ADR: data, contexto, opções, decisão, consequências, evidência de eval (ou hipótese a medir).
+- ADR: data, contexto, opções, decisão, consequências, **ganhos esperados**, **resultados** (referência a `eval/runs/<run_id>.json` e notebook — não duplicar tabelas completas).
 - `docs/architecture.md` descreve o desenho **atual** (com data da última promoção), não o alvo futuro.
+- **Diagramas mermaid obrigatórios** em `architecture.md`: fluxo de **cada** arquitetura executável (`baseline`, `workflow`, …) — grafo, tools/pipeline, memória quando houver.
 - Complexidade nova sem ADR datado = incompleto. O sistema corre por CLI; o notebook não substitui o mapa. Skill: `architecture-adrs`.

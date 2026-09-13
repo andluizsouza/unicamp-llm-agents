@@ -37,9 +37,10 @@ Template: [adr-template.md](adr-template.md). Numeração `0001`, `0002`, … se
 1. **Data** — obrigatória.
 2. **Contexto** — limitação medida (cite `run_id` / resultado de eval) ou restrição explícita.
 3. **Opções** — pelo menos duas reais, incluindo “ficar como está”.
-4. **Decisão** — o que entra, o que fica fora.
+4. **Decisão** — o que entra, o que fica fora; **diagrama mermaid** do fluxo decidido (grafo, tools, dados).
 5. **Consequências** — complexidade, custo, latência, o que o eval passa a cobrir.
-6. **Evidência** — ganho, empate ou piora (mesmo modelo, baseline reexecutado) + hipótese. Empate/piora não apagam o incremento vigente.
+6. **Ganhos esperados vs resultados obtidos** — tabela resumida OK no ADR; detalhe completo aponta para `eval/runs/<run_id>.json` e notebook (`eval/notebooks/...`), sem copiar relatório inteiro.
+7. **Evidência** — ganho, empate ou piora (mesmo modelo, baseline reexecutado) + hipótese. Empate/piora não apagam o incremento vigente.
 
 Rejeite ADR cuja justificativa seja “é mais profissional” ou “vamos precisar depois”, salvo se a entrega **exige** aquela peça — aí a justificativa é a limitação do baseline que a peça ataca.
 
@@ -47,12 +48,18 @@ Rejeite ADR cuja justificativa seja “é mais profissional” ou “vamos preci
 
 Atualize no mesmo conjunto de mudanças da promoção. Deve responder:
 
-- Arquitetura vigente (default do CLI): `id`, **data**, peças ligadas.
-- Diagrama mermaid do fluxo **que existe no código**.
-- Como executar: `make chat` / `ARCH=baseline`; golden-set no notebook (`run_eval`).
+- Arquitetura vigente (`CURRENT_ARCH`): `id`, **data**, peças ligadas.
+- **Seção por arquitetura executável** (`baseline`, `workflow`, …), cada uma com:
+  - decisão técnica e componentes (`recfair/...`);
+  - diagramas mermaid (grafo LangGraph ou fluxo monolito; pipeline de tools; memória se houver);
+  - ganhos esperados e **ponte** para evidência (`eval/runs/`, notebook) — sem duplicar o relatório.
+- Tabela comparativa resumida entre versões (opcional).
+- Como executar: `make chat ARCH=current|baseline|workflow`; golden-set no notebook (`run_eval`).
 - Contratos de entrada/saída (estáveis entre versões).
 - Hard-stops e human-in-the-loop.
 - O que deliberadamente **não** está no sistema.
 - Histórico (id, data, ADR) das versões ainda executáveis.
 
 Não descreva um supervisor se o código ainda é um prompt.
+
+O README na raiz do app deve apontar para `docs/architecture.md`, ADRs, notebooks e layout de pastas — o avaliador navega pelo README primeiro.

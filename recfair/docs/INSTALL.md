@@ -84,10 +84,13 @@ Depois:
 ## 6. Verificar instalação
 
 ```bash
-make chat ARCH=baseline   # requer GOOGLE_API_KEY
+make chat ARCH=current    # arquitetura vigente (workflow) — requer GOOGLE_API_KEY
+make chat ARCH=baseline   # baseline E1
 ```
 
-Resultados do golden-set: execute o notebook `eval/notebooks/E1_baseline_report.ipynb`.
+Mapa do repositório: [`README.md`](../README.md). Arquitetura: [`docs/architecture.md`](architecture.md).
+
+Relatórios de eval: [`eval/notebooks/E1_baseline.ipynb`](../eval/notebooks/E1_baseline.ipynb) · [`eval/notebooks/E2_workflow.ipynb`](../eval/notebooks/E2_workflow.ipynb).
 
 ## Arquivos de dependências
 

@@ -26,7 +26,12 @@ Prós / contras (complexidade, custo, latência, eval).
 
 Escolhemos ___. Entra no código agora: ___. Fica fora: ___.
 
-Se o eval empatar ou piorar, registre hipótese. O incremento vigente **permanece** executável (default do CLI). Não acrescente peças extras sem nova evidência.
+```mermaid
+flowchart TD
+    %% diagrama do fluxo implementado (grafo, tools, dados)
+```
+
+Se o eval empatar ou piorar, registre hipótese. O incremento vigente **permanece** executável (`CURRENT_ARCH`). Não acrescente peças extras sem nova evidência.
 
 ## Consequências
 
@@ -35,10 +40,18 @@ Se o eval empatar ou piorar, registre hipótese. O incremento vigente **permanec
 - O que o eval passa a cobrir (sem listar fórmulas aqui se o projeto ainda não as definiu)
 - Risco (custo, falha, governança)
 
+### Ganhos esperados vs resultados
+
+| Expectativa | Resultado | Evidência |
+| :--- | :--- | :--- |
+| ... | ganho / empate / piora | `eval/runs/<run_id>.json`, notebook |
+
+Resumo no ADR; tabelas completas ficam no notebook — não duplicar.
+
 ## Evidência / reavaliação
 
 - Hipótese: ...
-- Experimento: golden-set revisão `...`, notebook `eval/notebooks/...`
+- Experimento: golden-set revisão `...`, notebook `eval/notebooks/...`, manifests `eval/runs/...`
 - Reavaliar até: YYYY-MM-DD
 ```
 
