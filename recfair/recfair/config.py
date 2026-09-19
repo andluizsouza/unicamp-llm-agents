@@ -19,6 +19,12 @@ ARCHITECTURE_DATES = {
 PROMPT_VERSION = "v2"
 TEMPERATURE = 0
 N_RECOMMEND = 5
+HANDOFF_PHONE = "0800-000-0000"
+OUT_OF_CONTEXT_TEXT = (
+    "Eu sou um assistente virtual de O Boticário e estou aqui para te ajudar "
+    "na sua próxima compra. Qual produto ou marca você procura? "
+    "Posso te dar algumas dicas."
+)
 DEFAULT_MODEL = "gemini-3.5-flash-lite"
 THINKING_LEVEL = "minimal"
 

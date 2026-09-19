@@ -35,6 +35,7 @@ _FAMILIA_CONTEXT: dict[str, EvalContext] = {
     "G_faq_revenda": "faq",
     "G_routing": "roteamento",
     "G_handoff": "roteamento",
+    "G_out_of_context": "roteamento",
 }
 
 
@@ -77,7 +78,7 @@ DEFAULT_FAST_CASE_IDS: tuple[str, ...] = (
     "T39",  # FAQ
     "T41",  # roteamento → perguntas frequentes
     "T42",  # roteamento → recomendação
-    "T43",  # roteamento → transbordo
+    "T43",  # roteamento → fora de contexto
 )
 
 
@@ -139,6 +140,8 @@ def select_cases_for_fast_run(
 
 def routing_destination(case: dict[str, Any]) -> str:
     """Expected routing destination label for a routing-context case."""
+    if case.get("familia") == "G_out_of_context":
+        return "fora de contexto"
     if case.get("familia") == "G_handoff":
         return "transbordo"
     route = case.get("expected_route")

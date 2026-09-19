@@ -501,8 +501,8 @@
   },
   {
     "id": "T43",
-    "tipo": "G-handoff",
-    "familia": "G_handoff",
+    "tipo": "fora de contexto",
+    "familia": "G_out_of_context",
     "verificacao": "auto",
     "entrada": "Como faço para declarar o Imposto de Renda da Receita Federal?",
     "contexto": "roteamento"
@@ -644,18 +644,34 @@
   },
   {
     "id": "T57",
-    "tipo": "G-handoff",
-    "familia": "G_handoff",
+    "tipo": "fora de contexto",
+    "familia": "G_out_of_context",
     "verificacao": "auto",
     "entrada": "Qual a previsão do tempo em Campinas para amanhã?",
     "contexto": "roteamento"
   },
   {
     "id": "T58",
+    "tipo": "fora de contexto",
+    "familia": "G_out_of_context",
+    "verificacao": "auto",
+    "entrada": "Preciso de orientação sobre um processo judicial trabalhista.",
+    "contexto": "roteamento"
+  },
+  {
+    "id": "T59",
+    "tipo": "fora de contexto",
+    "familia": "G_out_of_context",
+    "verificacao": "auto",
+    "entrada": "Qual a receita de bolo de chocolate?",
+    "contexto": "roteamento"
+  },
+  {
+    "id": "T60",
     "tipo": "G-handoff",
     "familia": "G_handoff",
     "verificacao": "auto",
-    "entrada": "Preciso de orientação sobre um processo judicial trabalhista.",
+    "entrada": "Como abro uma franquia de loja O Boticário?",
     "contexto": "roteamento"
   }
 ]

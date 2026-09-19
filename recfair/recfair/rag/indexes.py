@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from recfair.config import export_hf_token
-from recfair.rag.faq_index import EMBEDDING_MODEL, build_faq_index
+from recfair.rag.embedder import EMBEDDING_MODEL
+from recfair.rag.faq_index import build_faq_index
 from recfair.tools.claims_semantic import build_claims_index
 
 

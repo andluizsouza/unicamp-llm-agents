@@ -36,7 +36,7 @@ format: ## ruff format
 
 data: ## regenerate CSVs and FAISS indexes (claims + FAQ)
 	$(DOTENV); $(PYTHON) -m recfair.data.catalog
-	$(DOTENV); $(PYTHON) -m recfair.rag.build_indexes
+	$(DOTENV); $(PYTHON) -m recfair.rag.indexes
 
 chat: ## terminal UI (default = vigente via ARCH=current)
 	$(DOTENV); $(PYTHON) -m recfair.cli --arch $(ARCH)

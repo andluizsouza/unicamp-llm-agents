@@ -12,8 +12,10 @@ Domínios:
   também são recommendation.
 - faq: políticas de e-commerce (pagamento, bandeiras de cartão, prazo de entrega, troca)
   ou revenda (horário, rotina, benefícios de revender). NÃO ranqueie catálogo.
-- handoff: fora de domínio (imposto de renda, clima, medicina, código-fonte, etc.)
-  ou consulta que não é produto nem FAQ da KB.
+- out_of_context: tema totalmente externo a O Boticário e à compra de beleza
+  (imposto de renda, clima, medicina, jurídico geral, receitas, geopolítica, etc.).
+- handoff: universo RecFair (e-commerce, revenda, marcas do grupo, cadastro, contratos,
+  benefícios não cobertos pela KB) quando NÃO é ranking de catálogo nem FAQ respondível.
 
 Skills disponíveis:
 {skills_index}
@@ -22,8 +24,9 @@ Regras:
 - Escolha exatamente um domínio.
 - Se domain=recommendation, skill=skill_recommend e plan=["skill_recommend"].
 - Se domain=faq, skill=skill_faq e plan=["skill_faq"].
+- Se domain=out_of_context, skill=null e plan=["out_of_context"].
 - Se domain=handoff, skill=null e plan=["handoff"].
-- Confidence baixa (<0.45) → domain=handoff.
+- Confidence baixa (<0.45) → domain=out_of_context.
 - Nunca recomende SKUs. Nunca responda a FAQ. Só roteie.
 
 Consulta sanitizada:

@@ -148,6 +148,24 @@ class _MockEmbedder:
         return arr / norms
 
 
+def test_out_of_context_case_uses_fixed_template() -> None:
+    from eval.fingerprint import load_cases
+    from recfair.config import OUT_OF_CONTEXT_TEXT
+
+    case = next(item for item in load_cases() if item["id"] == "T59")
+    output = RecFairOutput(
+        status="out_of_context",
+        halt_reason="completed",
+        answer_text=OUT_OF_CONTEXT_TEXT,
+        agents_route=["security", "supervisor", "out_of_context"],
+    )
+    check = verify_case(case, output)
+    assert check["aprovado"] is True
+    assert check["skus"] == []
+    assert check["handoff_phone"] is None
+    assert check["severity"] == "none"
+
+
 def test_faq_case_uses_semantic_similarity(monkeypatch) -> None:
     from eval.fingerprint import load_cases
 
@@ -177,7 +195,7 @@ def test_context_mapping_matches_golden_set() -> None:
     assert len(summary["recomendacao"]) == 33
     assert len(summary["seguranca"]) == 5
     assert len(summary["faq"]) == 10
-    assert len(summary["roteamento"]) == 10
+    assert len(summary["roteamento"]) == 12
     for case in cases:
         assert eval_context_of(case) in EVAL_CONTEXTS
 
@@ -207,7 +225,8 @@ def test_routing_destination_split() -> None:
     destinations = [routing_destination(case) for case in cases]
     assert destinations.count("recomendação") == 3
     assert destinations.count("perguntas frequentes") == 3
-    assert destinations.count("transbordo") == 4
+    assert destinations.count("fora de contexto") == 4
+    assert destinations.count("transbordo") == 2
 
 
 def test_summarize_by_context_partitions_records() -> None:
@@ -232,8 +251,9 @@ def test_summarize_by_context_partitions_records() -> None:
     assert blocks["recomendacao"]["n"] == 33
     assert blocks["seguranca"]["n"] == 5
     assert blocks["faq"]["n"] == 10
-    assert blocks["roteamento"]["n"] == 10
-    assert blocks["roteamento"]["by_destination"]["transbordo"]["n"] == 4
+    assert blocks["roteamento"]["n"] == 12
+    assert blocks["roteamento"]["by_destination"]["fora de contexto"]["n"] == 4
+    assert blocks["roteamento"]["by_destination"]["transbordo"]["n"] == 2
     rec_subset = filter_records_by_context(records, "recomendacao")
     assert len(rec_subset) == 33
 
@@ -286,9 +306,9 @@ def test_summarize_rf04_only_on_abstention_cases() -> None:
 
 
 def test_html_status_colors_use_canonical_palette() -> None:
-    from eval.report import render_comparison_report
-
     import pandas as pd
+
+    from eval.report import render_comparison_report
 
     df = pd.DataFrame(
         [

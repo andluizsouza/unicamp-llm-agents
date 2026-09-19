@@ -24,15 +24,17 @@ def _structured() -> Any:
 
 
 def _coerce(decision: RoutingDecision) -> RoutingDecision:
-    """Normalize domain/skill/plan; low confidence becomes handoff."""
+    """Normalize domain/skill/plan; low confidence becomes out_of_context."""
     if decision.confidence < _LOW_CONFIDENCE:
         return RoutingDecision(
-            domain="handoff",
+            domain="out_of_context",
             skill=None,
-            plan=["handoff"],
-            routing_reason=decision.routing_reason + " (confidence baixa → handoff)",
+            plan=["out_of_context"],
+            routing_reason=decision.routing_reason + " (confidence baixa → out_of_context)",
             confidence=decision.confidence,
         )
+    if decision.domain == "out_of_context":
+        return decision.model_copy(update={"skill": None, "plan": ["out_of_context"]})
     if decision.domain == "handoff":
         return decision.model_copy(update={"skill": None, "plan": ["handoff"]})
     if decision.domain == "recommendation":
@@ -72,5 +74,5 @@ def route_from_supervisor(state: MultiAgentState) -> str:
     """Conditional edge after the supervisor."""
     routing = state.get("routing")
     if routing is None:
-        return "handoff"
+        return "out_of_context"
     return routing.domain

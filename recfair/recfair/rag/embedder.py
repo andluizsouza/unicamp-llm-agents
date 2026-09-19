@@ -9,7 +9,8 @@ import numpy as np
 
 from recfair.config import huggingface_token_kwargs
 
-EMBEDDING_MODEL = "paraphrase-multilingual-MiniLM-L12-v2"
+EMBEDDING_MODEL_SHORT = "paraphrase-multilingual-MiniLM-L12-v2"
+EMBEDDING_MODEL = f"sentence-transformers/{EMBEDDING_MODEL_SHORT}"
 
 
 class Embedder(Protocol):
@@ -23,7 +24,7 @@ class Embedder(Protocol):
 class MiniLMEmbedder:
     """Adapter over ``sentence-transformers`` MiniLM."""
 
-    def __init__(self, model_name: str = EMBEDDING_MODEL) -> None:
+    def __init__(self, model_name: str = EMBEDDING_MODEL_SHORT) -> None:
         from sentence_transformers import SentenceTransformer
 
         self._model = SentenceTransformer(model_name, **huggingface_token_kwargs())

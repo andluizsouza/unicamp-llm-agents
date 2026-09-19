@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 ARCHITECTURE_LABELS: dict[str, str] = {
     "baseline": "E1 — Baseline",
     "workflow": "E2 — Workflow",
@@ -34,10 +32,16 @@ CONTEXT_SECTIONS: dict[str, dict[str, str]] = {
     },
     "roteamento": {
         "titulo": "H.4 — Roteamento do supervisor",
-        "pergunta": "O supervisor encaminhou para o destino correto: recomendação, FAQ ou transbordo humano?",
+        "pergunta": (
+            "O supervisor encaminhou para o destino correto: recomendação, FAQ, "
+            "transbordo humano ou redirecionamento fora de contexto?"
+        ),
         "comparacao": "Somente E3 — Multi-agentes (única com supervisor)",
         "metrica_principal": "Taxa de roteamento correto",
-        "casos": "T41–T43 e T52–T58 (10 perguntas: 3 recomendação, 3 FAQ, 4 transbordo)",
+        "casos": (
+            "T41–T43, T52–T60 (12 perguntas: 3 recomendação, 3 FAQ, "
+            "2 transbordo, 4 fora de contexto)"
+        ),
     },
 }
 
@@ -115,7 +119,8 @@ METRIC_GLOSSARY: list[dict[str, str]] = [
         "contexto": "Roteamento (H.4)",
         "o_que_mede": (
             "Percentual de casos em que o supervisor acionou o destino esperado: "
-            "agente de recomendação, agente de FAQ ou nó de transbordo humano."
+            "agente de recomendação, agente de FAQ, nó de transbordo humano "
+            "ou redirecionamento fora de contexto."
         ),
         "como_interpretar": "Quanto mais alto, melhor. Medido apenas no E3 — Multi-agentes.",
     },
@@ -123,8 +128,8 @@ METRIC_GLOSSARY: list[dict[str, str]] = [
         "nome": "Distribuição por destino",
         "contexto": "Roteamento (H.4)",
         "o_que_mede": (
-            "Taxa de acerto separada para os três destinos: recomendação (3 casos), "
-            "FAQ (3 casos) e transbordo (4 casos)."
+            "Taxa de acerto separada por destino: recomendação (3), FAQ (3), "
+            "transbordo (2) e fora de contexto (4)."
         ),
         "como_interpretar": "Revela se o supervisor erra mais em um tipo de pergunta.",
     },
@@ -133,15 +138,6 @@ METRIC_GLOSSARY: list[dict[str, str]] = [
 
 def render_metric_glossary() -> str:
     """HTML glossary table for notebook insertion."""
-    from eval.report import render_comparison_report
-    import pandas as pd
+    from eval.report.e3_panels import render_metric_glossary as _render
 
-    df = pd.DataFrame(METRIC_GLOSSARY)
-    return render_comparison_report(
-        df,
-        status_col="contexto",
-        title="Glossário das métricas de avaliação",
-        subtitle="Consulta rápida — cada contexto tem uma métrica principal e métricas de apoio.",
-        code_columns=frozenset(),
-        show_legend=False,
-    )
+    return _render()

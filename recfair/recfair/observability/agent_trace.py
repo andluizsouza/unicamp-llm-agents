@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from recfair.observability.cost import estimate_llm_cost_usd
+from recfair.observability.tokens import estimate_llm_cost_usd
 
 
 class AgentTrace(BaseModel):
@@ -33,29 +33,7 @@ class AgentTrace(BaseModel):
         return payload
 
 
-class AgentTraceLog(BaseModel):
-    """Ordered list of agent traces plus the concatenated route."""
-
-    steps: list[AgentTrace] = Field(default_factory=list)
-
-    def append_step(self, step: AgentTrace) -> None:
-        """Record a step (mutates this log; used only inside graph nodes)."""
-        self.steps.append(step)
-
-    def route(self) -> list[str]:
-        """Agent ids in execution order."""
-        return [step.agent_id for step in self.steps]
-
-    def route_label(self) -> str:
-        """Human-readable route, e.g. ``security > supervisor > faq``."""
-        return " > ".join(self.route())
-
-    def to_dicts(self) -> list[dict[str, Any]]:
-        """Serialize steps for manifests and CLI ``/trace``."""
-        return [step.to_dict() for step in self.steps]
-
-
-def traces_to_dicts(rows: list[Any]) -> list[dict[str, Any]]:
+def _serialize_traces(rows: list[Any]) -> list[dict[str, Any]]:
     """Normalize raw state traces (dicts or models) and attach ``custo_usd``."""
     steps: list[AgentTrace] = []
     for row in rows:
@@ -65,7 +43,12 @@ def traces_to_dicts(rows: list[Any]) -> list[dict[str, Any]]:
         if isinstance(row, dict):
             payload = {key: value for key, value in row.items() if key != "custo_usd"}
             steps.append(AgentTrace.model_validate(payload))
-    return AgentTraceLog(steps=steps).to_dicts()
+    return [step.to_dict() for step in steps]
+
+
+def traces_to_dicts(rows: list[Any]) -> list[dict[str, Any]]:
+    """Normalize raw state traces (dicts or models) and attach ``custo_usd``."""
+    return _serialize_traces(rows)
 
 
 def append_trace(state: dict[str, Any], trace: AgentTrace) -> list[dict[str, Any]]:

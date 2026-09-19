@@ -6,26 +6,18 @@ import logging
 import time
 from typing import Any, Literal
 
-from pydantic import BaseModel
-
 from recfair.graphs.multiagent.llm import make_structured_llm, unpack_structured
+from recfair.graphs.multiagent.node_helpers import agents_route
 from recfair.graphs.multiagent.skills import load_skill
 from recfair.graphs.multiagent.state import MultiAgentState
 from recfair.observability.agent_trace import AgentTrace, append_trace
 from recfair.prompts.multiagent_v3 import build_faq_prompt
 from recfair.rag.faq_index import FAQ_K, retrieve_faq
 from recfair.schemas.output import RecFairOutput
-from recfair.schemas.routing import AgentMetrics, AgentResult, RoutingDecision
+from recfair.schemas.routing import AgentMetrics, AgentResult, FaqSynthesis, RoutingDecision
 
 _LOG = logging.getLogger(__name__)
 _STRUCTURED: Any = None
-
-
-class FaqSynthesis(BaseModel):
-    """Grounded FAQ answer; ``no_evidence`` triggers a single replan."""
-
-    status: Literal["ok", "no_evidence"]
-    answer_text: str = ""
 
 
 def _structured() -> Any:
@@ -33,11 +25,6 @@ def _structured() -> Any:
     if _STRUCTURED is None:
         _STRUCTURED = make_structured_llm(FaqSynthesis)
     return _STRUCTURED
-
-
-def _route(state: MultiAgentState, extra: str) -> list[str]:
-    prior = [row["agent_id"] for row in (state.get("agent_traces") or [])]
-    return prior + [extra]
 
 
 def _replan(routing: RoutingDecision | None, suffix: str) -> RoutingDecision:
@@ -184,7 +171,7 @@ def faq_node(state: MultiAgentState) -> dict[str, Any]:
             used_llm=True,
         )
 
-    route = _route(state, "faq")
+    route = agents_route(state, "faq")
     output = RecFairOutput(
         status="faq",
         halt_reason="completed",

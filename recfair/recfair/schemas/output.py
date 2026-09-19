@@ -33,7 +33,7 @@ class RecFairOutput(BaseModel):
     still use ``recommendation`` / ``abstention`` with the same item contract.
     """
 
-    status: Literal["recommendation", "abstention", "faq", "handoff"]
+    status: Literal["recommendation", "abstention", "faq", "handoff", "out_of_context"]
     items: list[RecommendationItem] = Field(default_factory=list)
     reason: Literal["missing_category", "unknown_category", "unknown_brand"] | None = None
     halt_reason: Literal["completed", "abstained", "schema_invalid", "recursion_limit"]

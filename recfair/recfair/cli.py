@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 import uuid
 
@@ -15,7 +16,12 @@ from recfair.config import apply_dotenv, ensure_google_api_key, export_hf_token
 from recfair.graphs import multiagent as multiagent_mod
 from recfair.graphs import workflow as workflow_mod
 from recfair.graphs.registry import get_runner, list_architectures
-from recfair.logging import configure_logging
+
+
+def _configure_logging(level: int = logging.WARNING) -> None:
+    """Configure root logging and silence noisy third-party loggers."""
+    logging.basicConfig(level=level, format="%(levelname)s %(name)s: %(message)s")
+    logging.getLogger("google_genai.models").setLevel(logging.ERROR)
 
 _THREADED = frozenset({workflow_mod.architecture_id(), multiagent_mod.architecture_id()})
 
@@ -39,7 +45,7 @@ def _reset_thread(arch_id: str, thread_id: str) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     """Run Rich chat loop."""
-    configure_logging()
+    _configure_logging()
     apply_dotenv()
     ensure_google_api_key()
     export_hf_token()

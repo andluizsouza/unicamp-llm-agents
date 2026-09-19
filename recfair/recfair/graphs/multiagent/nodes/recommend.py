@@ -6,6 +6,7 @@ import logging
 import time
 from typing import Any
 
+from recfair.graphs.multiagent.node_helpers import agents_route
 from recfair.graphs.multiagent.skills import load_skill
 from recfair.graphs.multiagent.state import MultiAgentState
 from recfair.graphs.workflow.nodes.intent import parse_intent_node
@@ -21,11 +22,6 @@ _LOG = logging.getLogger(__name__)
 
 def _with_route(output: RecFairOutput, route: list[str]) -> RecFairOutput:
     return output.model_copy(update={"agents_route": route})
-
-
-def _route(state: MultiAgentState) -> list[str]:
-    prior = [row["agent_id"] for row in (state.get("agent_traces") or [])]
-    return prior + ["recommendation"]
 
 
 def _error_update(
@@ -130,7 +126,7 @@ def recommendation_node(state: MultiAgentState) -> dict[str, Any]:
         )
 
     latency = round(time.perf_counter() - start, 4)
-    route = _route(state)
+    route = agents_route(state, "recommendation")
     output = _with_route(out_update["output"], route)
     tokens_in = intent_update.get("tokens_entrada", 0) - state.get("tokens_entrada", 0)
     tokens_out = intent_update.get("tokens_saida", 0) - state.get("tokens_saida", 0)

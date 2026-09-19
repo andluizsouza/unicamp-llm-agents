@@ -13,6 +13,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from recfair.config import data_dir, huggingface_token_kwargs
+from recfair.rag.embedder import EMBEDDING_MODEL
 from recfair.rag.store import indexes_dir
 
 FAQ_INDEX_STEM = "faq"
@@ -29,7 +30,6 @@ REVENDA_CHUNK_SIZE = 512
 REVENDA_CHUNK_OVERLAP = 60
 
 SPLITTER_SEPARATORS = ["\n\n", "\n", " ", ""]
-EMBEDDING_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 
 
 def kb_dir() -> Path:

@@ -75,18 +75,20 @@ flowchart TD
     SUP --> ROUTE{RoutingDecision.domain}
     ROUTE -->|recommendation| REC[recommendation_agent]
     ROUTE -->|faq| FAQ[faq_agent]
+    ROUTE -->|out_of_context| OOC[out_of_context_node]
     ROUTE -->|handoff| HO[handoff_node]
     FAQ -->|no_evidence| HO
     REC --> END([END])
     FAQ --> END
+    OOC --> END
     HO --> END
 ```
 
 **Controles:** `recursion_limit=16`; um replanejamento FAQ→handoff (`replanned=True` no contrato); skills carregadas só depois do roteamento (`load_skill`); especialistas gravam `last_result: AgentResult`.
 
-### Por que segurança e handoff não são agentes
+### Por que segurança, out_of_context e handoff não são agentes
 
-Não passam no teste de 4 colunas (escopo / tools / instrução / avaliação isolada): são regex+redact e template fixo, sem raciocínio LLM.
+Não passam no teste de 4 colunas (escopo / tools / instrução / avaliação isolada): são regex+redact e templates fixos, sem raciocínio LLM. `out_of_context` redireciona perguntas externas; `handoff` transborda in-contexto com telefone (ADR 0005).
 
 ### Pipeline de recomendação (interno ao especialista)
 
@@ -142,12 +144,12 @@ Pipeline de 7 passos em `engine.py` (ADR 0002). `eval/gold.py` delega ao mesmo e
 
 `RecFairOutput` (`recfair/schemas/output.py`):
 
-- `status`: `recommendation` | `abstention` | `faq` | `handoff`
+- `status`: `recommendation` | `abstention` | `faq` | `handoff` | `out_of_context`
 - `items[]`: Top-5 ou vazio
 - `answer_text` / `handoff_phone` / `agents_route`: campos E3 opcionais (default vazio)
 - T01–T38 continuam usando só `recommendation`/`abstention`
 
-Contrato entre agentes: `RoutingDecision` e `AgentResult` em `schemas/routing.py`. O grafo persiste `last_result` em cada especialista; FAQ `no_evidence`/`error` e recomendação `error` roteiam para `handoff_node`.
+Contrato entre agentes: `RoutingDecision` e `AgentResult` em `schemas/routing.py`. O grafo persiste `last_result` em cada especialista; FAQ `no_evidence`/`error` e recomendação `error` roteiam para `handoff_node`. Perguntas totalmente fora de O Boticário vão para `out_of_context_node` (template fixo, sem telefone).
 
 ---
 

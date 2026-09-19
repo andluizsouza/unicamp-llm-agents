@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from recfair.config import HANDOFF_PHONE, OUT_OF_CONTEXT_TEXT
 from recfair.graphs.multiagent.nodes.faq import faq_node, route_after_faq
-from recfair.graphs.multiagent.nodes.handoff import HANDOFF_PHONE, handoff_node
+from recfair.graphs.multiagent.nodes.handoff import handoff_node
+from recfair.graphs.multiagent.nodes.out_of_context import out_of_context_node
 from recfair.graphs.multiagent.nodes.recommend import route_after_recommend
 from recfair.graphs.multiagent.nodes.security import security_node
 from recfair.graphs.multiagent.nodes.supervisor import _coerce
@@ -27,7 +29,7 @@ def test_load_skill_faq_exists() -> None:
     assert "score_recommendation" in rec["tools"]
 
 
-def test_coerce_low_confidence_becomes_handoff() -> None:
+def test_coerce_low_confidence_becomes_out_of_context() -> None:
     decision = RoutingDecision(
         domain="faq",
         skill="skill_faq",
@@ -36,9 +38,22 @@ def test_coerce_low_confidence_becomes_handoff() -> None:
         confidence=0.2,
     )
     coerced = _coerce(decision)
-    assert coerced.domain == "handoff"
+    assert coerced.domain == "out_of_context"
     assert coerced.skill is None
-    assert coerced.plan == ["handoff"]
+    assert coerced.plan == ["out_of_context"]
+
+
+def test_out_of_context_node_emits_template_without_phone() -> None:
+    result = out_of_context_node({"query": "qual a capital da frança", "step": 1})
+    output = result["output"]
+    assert output.status == "out_of_context"
+    assert output.answer_text == OUT_OF_CONTEXT_TEXT
+    assert output.handoff_phone is None
+    assert "out_of_context" in output.agents_route
+    last = result["last_result"]
+    assert isinstance(last, AgentResult)
+    assert last.agent_id == "out_of_context"
+    assert last.status == "ok"
 
 
 def test_handoff_node_sets_phone_and_agent_result() -> None:

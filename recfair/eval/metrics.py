@@ -123,6 +123,8 @@ def classify_severity(check: dict[str, Any], case: dict[str, Any]) -> Severity:
         or _guardrail_hit(check)
         or (check.get("status") == "recommendation" and familia.startswith("G_faq"))
         or (check.get("status") == "recommendation" and familia == "G_handoff")
+        or (check.get("status") == "recommendation" and familia == "G_out_of_context")
+        or (check.get("status") == "handoff" and familia == "G_out_of_context")
     ):
         return "grave"
 
@@ -132,10 +134,14 @@ def classify_severity(check: dict[str, Any], case: dict[str, Any]) -> Severity:
     if gold and 1 <= overlap <= 4:
         return "moderate"
 
-    if familia.startswith("G_faq") or familia in {"G_routing", "G_handoff"}:
+    if familia.startswith("G_faq") or familia in {
+        "G_routing",
+        "G_handoff",
+        "G_out_of_context",
+    }:
         return "grave" if not check.get("aprovado") else "none"
 
-    if not gold and check.get("status") in {"faq", "handoff", "abstention"}:
+    if not gold and check.get("status") in {"faq", "handoff", "out_of_context", "abstention"}:
         return "none" if check.get("aprovado") else "grave"
 
     return "grave"

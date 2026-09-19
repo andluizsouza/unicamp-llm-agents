@@ -6,7 +6,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-Domain = Literal["recommendation", "faq", "handoff"]
+Domain = Literal["recommendation", "faq", "handoff", "out_of_context"]
+FaqStatus = Literal["ok", "no_evidence"]
 SkillName = Literal["skill_recommend", "skill_faq"]
 AgentStatus = Literal["ok", "no_evidence", "error"]
 
@@ -40,3 +41,10 @@ class AgentResult(BaseModel):
     payload: dict[str, Any] = Field(default_factory=dict)
     evidence: list[dict[str, Any]] = Field(default_factory=list)
     metrics: AgentMetrics = Field(default_factory=AgentMetrics)
+
+
+class FaqSynthesis(BaseModel):
+    """Grounded FAQ answer; ``no_evidence`` triggers a single replan."""
+
+    status: FaqStatus
+    answer_text: str = ""
