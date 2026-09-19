@@ -7,13 +7,15 @@ import os
 import re
 from pathlib import Path
 
-CURRENT_ARCH = "workflow"
+CURRENT_ARCH = "multiagent"
 BASELINE_ARCH = "baseline"
 ARCHITECTURE_DATES = {
     "baseline": "2026-09-07",
     "workflow": "2026-09-13",
+    "multiagent": "2026-09-19",
 }
 
+# Legacy global (E2). Each graph module exposes its own ``prompt_version()``.
 PROMPT_VERSION = "v2"
 TEMPERATURE = 0
 N_RECOMMEND = 5
@@ -75,6 +77,20 @@ def sampling_fixed_by_model(model: str) -> bool:
     return normalize_model_name(model) in _FIXED_SAMPLING_MODELS
 
 
+def parse_dotenv(text: str) -> dict[str, str]:
+    """Parse ``KEY=VALUE`` lines; strip quotes; skip comments and blanks."""
+    parsed: dict[str, str] = {}
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, val = line.partition("=")
+        key, val = key.strip(), val.strip().strip('"').strip("'")
+        if key:
+            parsed[key] = val
+    return parsed
+
+
 def apply_dotenv() -> None:
     """Load KEY=VALUE from nearby ``.env`` files without overriding existing env."""
     seen: set[Path] = set()
@@ -83,14 +99,42 @@ def apply_dotenv() -> None:
         if path in seen or not path.is_file():
             continue
         seen.add(path)
-        for raw in path.read_text(encoding="utf-8").splitlines():
-            line = raw.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, _, val = line.partition("=")
-            key, val = key.strip(), val.strip().strip('"').strip("'")
-            if key and key not in os.environ:
+        for key, val in parse_dotenv(path.read_text(encoding="utf-8")).items():
+            if key not in os.environ:
                 os.environ[key] = val
+
+
+def export_hf_token() -> str | None:
+    """Export ``HF_TOKEN`` for Hugging Face Hub (and alias ``HUGGING_FACE_HUB_TOKEN``).
+
+    Loads ``.env`` via :func:`apply_dotenv` if the process does not already have
+    the variable. Never logs or returns the secret.
+
+    Returns:
+        Source label (``HF_TOKEN`` or ``HUGGING_FACE_HUB_TOKEN``), or ``None``
+        if neither is set.
+    """
+    apply_dotenv()
+    token = (os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN") or "").strip()
+    if not token:
+        return None
+    source = "HF_TOKEN" if (os.environ.get("HF_TOKEN") or "").strip() else "HUGGING_FACE_HUB_TOKEN"
+    os.environ["HF_TOKEN"] = token
+    os.environ.setdefault("HUGGING_FACE_HUB_TOKEN", token)
+    return source
+
+
+def hf_token() -> str | None:
+    """Return the Hugging Face token after exporting aliases, or ``None``."""
+    export_hf_token()
+    token = (os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN") or "").strip()
+    return token or None
+
+
+def huggingface_token_kwargs() -> dict[str, str]:
+    """Kwargs for ``SentenceTransformer`` / ``HuggingFaceEmbeddings.model_kwargs``."""
+    token = hf_token()
+    return {"token": token} if token else {}
 
 
 def ensure_google_api_key() -> str:

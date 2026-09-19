@@ -27,12 +27,19 @@ class RecommendationItem(BaseModel):
 
 
 class RecFairOutput(BaseModel):
-    """Top-level agent response contract."""
+    """Top-level agent response contract.
 
-    status: Literal["recommendation", "abstention"]
+    ``faq`` and ``handoff`` are additive E3 statuses. Ranking cases (T01–T38)
+    still use ``recommendation`` / ``abstention`` with the same item contract.
+    """
+
+    status: Literal["recommendation", "abstention", "faq", "handoff"]
     items: list[RecommendationItem] = Field(default_factory=list)
     reason: Literal["missing_category", "unknown_category", "unknown_brand"] | None = None
     halt_reason: Literal["completed", "abstained", "schema_invalid", "recursion_limit"]
+    answer_text: str | None = None
+    handoff_phone: str | None = None
+    agents_route: list[str] = Field(default_factory=list)
 
     @field_validator("items")
     @classmethod

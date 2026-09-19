@@ -1,28 +1,27 @@
 # Arquitetura RecFair
 
-**Última atualização:** 2026-09-13  
-**Arquitetura vigente (`CURRENT_ARCH`):** `workflow` · data 2026-09-13 · ADR [0002](adr/0002-workflow-scoring.md)  
-**Baseline executável:** `baseline` · data 2026-09-07 · ADR [0001](adr/0001-baseline.md)
+**Última atualização:** 2026-09-19  
+**Arquitetura vigente (`CURRENT_ARCH`):** `multiagent` · data 2026-09-19 · ADR [0003](adr/0003-multiagent-supervisor.md)  
+**Ainda executáveis:** `workflow` · 2026-09-13 · ADR [0002](adr/0002-workflow-scoring.md) · `baseline` · 2026-09-07 · ADR [0001](adr/0001-baseline.md)  
+**Régua E3:** ADR [0004](adr/0004-layered-evaluation-metrics.md) (nDCG@5 no pacote `eval/`, não no runtime)
 
-RecFair é um assistente de recomendação Top-5 para catálogo de beleza (Grupo Boticário, dados sintéticos). O contrato combina **utilidade** (popularidade na janela de 7 dias, filtros, claims) e **justiça** (diversidade de marca, abstenção, RF-*). Toda arquitetura expõe o mesmo schema de saída (`RecFairOutput`) e é medida pelo golden-set em `data/golden/cases.json`.
+RecFair é um assistente de recomendação Top-5 para catálogo de beleza (Grupo Boticário, dados sintéticos), agora também com FAQ de e-commerce/revenda e transbordo humano. Toda arquitetura expõe `RecFairOutput` e é medida pelo golden-set em `data/golden/cases.json`.
 
 ---
 
 ## Visão geral das arquiteturas
 
-| | `baseline` (E1) | `workflow` (E2, vigente) |
-| :--- | :--- | :--- |
-| **Padrão** | Monolito — 1× LLM | LangGraph — LLM só em `parse_intent` |
-| **Dados no prompt** | Catálogo + vendas inteiros (~29k tokens/caso) | Query NL (~425 tokens/caso) |
-| **Ranking** | Modelo no prompt | `tools/scoring/engine.py` (determinístico) |
-| **Tools** | 0 | 7 passos lógicos / ~5,8 calls por turno |
-| **Memória** | Stateless | `MemorySaver` + `thread_id` |
-| **Prompt** | `baseline_v1` | `workflow_v2` |
-| **ADR** | [0001](adr/0001-baseline.md) | [0002](adr/0002-workflow-scoring.md) |
-| **Relatório eval** | [E1_baseline.ipynb](../eval/notebooks/E1_baseline.ipynb) | [E2_workflow.ipynb](../eval/notebooks/E2_workflow.ipynb) |
-| **Run de referência** | `eval/runs/00b767134d22.json` | `eval/runs/d79563e06651.json` |
-
-Detalhes numéricos da comparação E1×E2 (mesmo modelo, mesma sessão, `golden_revision=15f3ed6986de9ce9`): ver **seção [Evidência](#evidência-de-eval)** — não duplicamos tabelas aqui.
+| | `baseline` (E1) | `workflow` (E2) | `multiagent` (E3, vigente) |
+| :--- | :--- | :--- | :--- |
+| **Padrão** | Monolito — 1× LLM | LangGraph — LLM só em `parse_intent` | Supervisor — 3 agentes + 2 nós |
+| **Dados no prompt** | Catálogo + vendas (~29k tokens) | Query NL | Query sanitizada + skills index / FAQ chunks |
+| **Ranking** | Modelo no prompt | `engine.py` (substring claims) | Mesmo engine + `match_claims_semantic` |
+| **Guardrail** | Não | Não | `security_node` regex/redact |
+| **FAQ / handoff** | Não | Não | Agente FAQ + nó template `0800-000-0000` |
+| **Memória** | Stateless | `MemorySaver` | `MemorySaver` (mesmo recorte) |
+| **Prompt** | `baseline_v1` | `workflow_v2` | `multiagent_v3` + intent v2 |
+| **ADR** | [0001](adr/0001-baseline.md) | [0002](adr/0002-workflow-scoring.md) | [0003](adr/0003-multiagent-supervisor.md) |
+| **Relatório eval** | [E1_baseline.ipynb](../eval/notebooks/E1_baseline.ipynb) | [E2_workflow.ipynb](../eval/notebooks/E2_workflow.ipynb) | [E3_evaluation.ipynb](../eval/notebooks/E3_evaluation.ipynb) |
 
 ---
 
@@ -30,252 +29,167 @@ Detalhes numéricos da comparação E1×E2 (mesmo modelo, mesma sessão, `golden
 
 ```
 recfair/
-├── cli.py                 # UI terminal; /trace, /reset, /arch
-├── config.py              # CURRENT_ARCH, paths, modelo
+├── cli.py                      # default = vigente (multiagent)
+├── config.py                   # CURRENT_ARCH=multiagent
 ├── graphs/
-│   ├── registry.py        # architecture_id → run()
-│   ├── baseline.py        # E1: stuffing + structured output
-│   └── workflow/          # E2: LangGraph
-│       ├── __init__.py    # build_graph(), run(), reset_checkpoint()
-│       ├── state.py       # WorkflowState
-│       └── nodes/         # intent, scoring, abstain, synthesize
-├── tools/scoring/
-│   ├── engine.py          # Fonte de verdade do ranking (7 passos)
-│   └── trace.py           # ScoreTrace (observabilidade)
-├── schemas/               # RecFairOutput, ParsedIntent
-├── prompts/               # baseline_v1, workflow_v2
-├── data/                  # catalog, claims, inventory → CSV/SQLite
-└── observability/         # tokens, custo, run_record
+│   ├── registry.py
+│   ├── baseline.py
+│   ├── workflow/               # E2 — intocado no incremento
+│   └── multiagent/             # E3
+│       ├── skills.py           # dict SKILLS inline
+│       └── nodes/              # security, supervisor, recommend, faq, handoff
+├── tools/
+│   ├── scoring/engine.py       # claim_matcher opcional (default = E2)
+│   ├── guardrails.py
+│   └── claims_semantic.py
+├── rag/                        # FAISS FAQ + build_indexes
+├── schemas/                    # RecFairOutput, ParsedIntent, RoutingDecision
+├── prompts/                    # baseline_v1, workflow_v2, multiagent_v3
+└── observability/agent_trace.py
 
 eval/
-├── runner.py              # run_eval(arch=...)
-├── verify.py              # RF-* + gaps E2
-├── gold.py                # gabarito → engine.py
-├── report.py              # tabelas HTML para notebooks
-├── notebooks/             # relatórios (Markdown + imports)
-└── runs/                  # manifests JSON por execução
+├── runner.py                   # run_eval + resumo_v3
+├── verify.py                   # legado + famílias E3 + campos v3
+├── metrics.py                  # ndcg_at_5, classify_severity
+├── requirements.py             # RF-01–RF-07
+├── gold.py                     # gold_for + gold_naive_for
+└── notebooks/E3_evaluation.ipynb
 ```
 
 ---
 
-## Arquitetura `baseline` (E1)
+## Arquitetura `multiagent` (E3, vigente)
 
-**Objetivo:** baseline mínimo e honesto — uma chamada Gemini com catálogo e vendas no contexto, saída estruturada `RecFairOutput`.
+**Objetivo:** atacar domínio único, claims substring e ausência de guardrail **sem** reescrever o ranking E2.
 
-**Ganho esperado:** simplicidade, zero infra de grafo/tools, exercita interpretação NL end-to-end.
+**Ganho esperado:** T26–T30 com sanitização real; T39–T43 (FAQ/rota/handoff) >0%; T18/T21/T22 parciais. Painel A (T01–T38) pode empatar ou cair 0–2 pp por roteamento — resultado válido.
 
-**Limitação medida:** agregação `units_7d`, desempate, preço/estoque/claims e memória multi-turn ficam no LLM — não determinístico. Ver run `00b767134d22` e notebook E1.
-
-### Fluxo (componentes)
-
-```mermaid
-flowchart LR
-    subgraph input [Entrada]
-        Q[Query NL]
-    end
-
-    subgraph baseline [graphs/baseline.py]
-        LOAD[_load_prompt_tables]
-        PROMPT[build_prompt baseline_v1]
-        LLM[ChatGoogleGenerativeAI\nstructured RecFairOutput]
-    end
-
-    subgraph data [data/ — stuffing]
-        CAT[(tb_catalogo CSV)]
-        SAL[(tb_vendas CSV)]
-    end
-
-    Q --> PROMPT
-    LOAD --> CAT
-    LOAD --> SAL
-    CAT --> PROMPT
-    SAL --> PROMPT
-    PROMPT --> LLM
-    LLM --> OUT[RecFairOutput]
-```
-
-### Sequência de execução
-
-```mermaid
-sequenceDiagram
-    participant U as Usuário
-    participant B as baseline.run
-    participant D as data/catalog
-    participant L as Gemini
-
-    U->>B: query
-    B->>D: ensure_csv_files + read CSVs
-    D-->>B: catalog + sales strings
-    B->>L: prompt ~29k tokens in
-    L-->>B: RecFairOutput JSON
-    B-->>U: output + CaseMetrics
-```
-
-### Peças técnicas
-
-| Peça | Arquivo | Notas |
-| :--- | :--- | :--- |
-| Runner | `recfair/graphs/baseline.py` | Cache de prompt tables; 1× `chamadas_llm` |
-| Prompt | `recfair/prompts/baseline_v1.py` | Instruções + CSVs inline |
-| Schema saída | `recfair/schemas/output.py` | `status`, `items[]`, `reason`, `halt_reason` |
-| Instrumentação | `recfair/observability/tokens.py` | tokens in/out, custo estimado |
-
-**Deliberadamente ausente:** LangGraph, tools, memória, MCP, `tb_claims`, `tb_inventory` no prompt E1.
-
----
-
-## Arquitetura `workflow` (E2, vigente)
-
-**Objetivo:** separar **interpretação NL** (`parse_intent`) de **execução determinística** (pipeline de scoring), com memória de sessão e observabilidade por SKU.
-
-**Ganho esperado:** ranking reprodutível, prompts curtos, trace auditável, suporte a claims/inventory, multi-turn T31–T33.
-
-**Resultado:** confirmado na comparação E2 — ver run `d79563e06651` e notebook E2 (interpretação na seção F.1 do notebook).
+**Resultado de eval ponta a ponta:** pendente de `GOOGLE_API_KEY` na sessão de correção. Testes unitários da régua e dos guardrails não usam LLM.
 
 ### Grafo LangGraph
 
 ```mermaid
 flowchart TD
-    START([START]) --> PI[parse_intent\nnodes/intent.py]
+    START([query]) --> SEC[security_node]
+    SEC --> SUP[supervisor_agent]
+    SUP --> ROUTE{RoutingDecision.domain}
+    ROUTE -->|recommendation| REC[recommendation_agent]
+    ROUTE -->|faq| FAQ[faq_agent]
+    ROUTE -->|handoff| HO[handoff_node]
+    FAQ -->|no_evidence| HO
+    REC --> END([END])
+    FAQ --> END
+    HO --> END
+```
+
+**Controles:** `recursion_limit=16`; um replanejamento FAQ→handoff (`replanned=True` no contrato); skills carregadas só depois do roteamento (`load_skill`); especialistas gravam `last_result: AgentResult`.
+
+### Por que segurança e handoff não são agentes
+
+Não passam no teste de 4 colunas (escopo / tools / instrução / avaliação isolada): são regex+redact e template fixo, sem raciocínio LLM.
+
+### Pipeline de recomendação (interno ao especialista)
+
+Reusa `parse_intent` E2 + `score_recommendation(..., claim_matcher=match_claims_semantic)` + synthesize. O default do engine (substring) permanece para `workflow` e `eval/gold.py`.
+
+### Memória
+
+Mesmo recorte E2: `MemorySaver` + `thread_id` → `session_intent`. T09/T31 **não** são alvo deste incremento.
+
+### Tools locais vs MCP
+
+Guardrail, claims embed, retrieve_faq e scoring são funções in-process. MCP recusado: um consumidor, dados empacotados, sem fronteira de permissão (ADR 0003).
+
+---
+
+## Arquitetura `baseline` (E1)
+
+**Objetivo:** baseline mínimo — uma chamada Gemini com catálogo e vendas no contexto, saída `RecFairOutput`.
+
+```mermaid
+flowchart LR
+    Q[Query NL] --> PROMPT[build_prompt baseline_v1]
+    CAT[(tb_catalogo)] --> PROMPT
+    SAL[(tb_vendas)] --> PROMPT
+    PROMPT --> LLM[ChatGoogleGenerativeAI]
+    LLM --> OUT[RecFairOutput]
+```
+
+**Deliberadamente ausente no E1:** LangGraph, tools, memória, claims, inventory, FAQ.
+
+---
+
+## Arquitetura `workflow` (E2)
+
+**Objetivo:** separar interpretação NL de ranking determinístico.
+
+```mermaid
+flowchart TD
+    START([START]) --> PI[parse_intent]
     PI --> ROUTE{route_after_intent}
     ROUTE -->|abstain| AB[abstain_node]
     ROUTE -->|proceed| SC[scoring_node]
     SC --> SY[synthesize_node]
     AB --> END1([END])
     SY --> END2([END])
-
-    subgraph checkpoint [MemorySaver]
-        SI[session_intent]
-        TID[thread_id]
-    end
-
-    PI -.->|read/write| checkpoint
-    SC --> ENG[score_recommendation\nengine.py]
-
-    subgraph sqlite [Dados locais]
-        T1[(tb_catalogo)]
-        T2[(tb_vendas)]
-        T3[(tb_claims)]
-        T4[(tb_inventory)]
-    end
-
-    ENG --> T1
-    ENG --> T2
-    ENG --> T3
-    ENG --> T4
-    ENG --> TRACE[ScoreTrace]
-    TRACE --> SY
 ```
 
-**Controles:** `recursion_limit=12` (grafo acíclico, 4 nós); roteamento condicional `abstain | score`; término em `END` ou `halt_reason` em exceção.
-
-### Pipeline de scoring (7 passos — `engine.py`)
-
-Invocado **sem LLM** a partir do `ParsedIntent` mergeado com `session_intent`.
-
-```mermaid
-flowchart TD
-    I[ParsedIntent] --> S1[1 filter_by_category_brand]
-    S1 --> S2[2 exclude_stock_and_price]
-    S2 --> S3[3 score_claims]
-    S3 --> S4[4 score_brand_diversity]
-    S4 --> S5[5 add_promo_launch]
-    S5 --> S6[6 rank_by_sales_tiebreak]
-    S6 --> S7[7 assemble_top5]
-    S7 --> R[ScoringResult\nskus + trace + tool_calls]
-
-    S2 -->|removed| X1[SKU fora: estoque 0 ou preço]
-    S3 -->|bonus +2| C1[match claim term]
-    S4 -->|bonus +1| D1[representante marca]
-    S5 -->|bonus +1| P1[is_launch / is_promo]
-    S6 --> TIE[pontos desc\nunits_7d desc\ncod_sku asc]
-```
-
-| Passo | Efeito | Trace `action` |
-| :---: | :--- | :--- |
-| 1 | Pool por `category` / `brand` | `pool` |
-| 2 | Remove sem estoque ou `price > max_price_brl` | `removed` / `pool` |
-| 3 | +2 se termo ∈ texto `tb_claims` | `bonus` |
-| 4 | +1 melhor SKU por marca (se `require_diversity`) | `bonus` |
-| 5 | +1 launch; +1 promo | `bonus` |
-| 6 | Ordenação determinística | `ranked` |
-| 7 | Top `N_RECOMMEND` (5) | `pool` |
-
-`eval/gold.py` delega ao mesmo `score_recommendation` — **gabarito offline = runtime**.
-
-### Memória de sessão
-
-```mermaid
-flowchart LR
-    T1[Turno 1\nthread_id fixo] --> PI1[parse_intent]
-    PI1 --> CP[(MemorySaver\ncheckpoint)]
-    CP --> SI[session_intent]
-    T2[Turno 2\nmesmo thread_id] --> PI2[parse_intent]
-    PI2 --> MERGE[merge session_intent]
-    SI --> MERGE
-    MERGE --> SC[scoring]
-```
-
-Isolamento: um bucket por `thread_id`. CLI: UUID por sessão; eval: `thread_id=case_id`; `/reset` apaga checkpoint.
-
-### Tools locais vs MCP
-
-Integração via **funções Python in-process** sobre CSV/SQLite (`recfair/data/`). MCP não adotado no E2: dados empacotados, consumidor único, latência mínima — ver ADR 0002.
-
-### Peças técnicas
-
-| Peça | Arquivo |
-| :--- | :--- |
-| Montagem grafo | `recfair/graphs/workflow/__init__.py` |
-| Estado | `recfair/graphs/workflow/state.py` |
-| Intent LLM | `recfair/graphs/workflow/nodes/intent.py` |
-| Scoring + synth | `recfair/graphs/workflow/nodes/scoring.py` |
-| Engine | `recfair/tools/scoring/engine.py` |
-| Trace | `recfair/tools/scoring/trace.py` |
-| Prompt intent | `recfair/prompts/workflow_v2.py` |
+Pipeline de 7 passos em `engine.py` (ADR 0002). `eval/gold.py` delega ao mesmo engine **sem** matcher semântico.
 
 ---
 
-## Contrato de saída (estável)
+## Contrato de saída
 
 `RecFairOutput` (`recfair/schemas/output.py`):
 
-- `status`: `recommendation` | `abstention`
-- `items[]`: SKU, nome, marca, `units_7d`, metadados opcionais
-- `reason` / `halt_reason`: abstenção ou limite
+- `status`: `recommendation` | `abstention` | `faq` | `handoff`
+- `items[]`: Top-5 ou vazio
+- `answer_text` / `handoff_phone` / `agents_route`: campos E3 opcionais (default vazio)
+- T01–T38 continuam usando só `recommendation`/`abstention`
 
-Entrada NL → `ParsedIntent` (`recfair/schemas/intent.py`) **apenas no workflow**.
+Contrato entre agentes: `RoutingDecision` e `AgentResult` em `schemas/routing.py`. O grafo persiste `last_result` em cada especialista; FAQ `no_evidence`/`error` e recomendação `error` roteiam para `handoff_node`.
+
+---
+
+## Avaliação (ADR 0004)
+
+Régua principal E3: **nDCG@5** (média por escopo) + `aprovado_exact` + `severity` + breakdown RF-01–RF-07 + `gap_intentional_pass` em T16–T30.
+
+Escopos: `restrict_core` T01–T15 · `gap` T16–T30 · `memory` T31–T33 · `scoring` T34–T38 · `overall` T01–T38.
+
+Painéis experimentais do notebook E3:
+
+- **A — congelado:** T01–T38 (comparável ao E2)
+- **B — expandido:** T01–T43 (FAQ/routing/handoff)
+
+`e1_rate_*` / `e2_rate_*` permanecem no manifest. Métricas **não** vivem no notebook.
+
+Golden-set: T01–T38 imutáveis; T39–T43 acrescentados. Hash `golden_revision` em cada run.
 
 ---
 
 ## Dados
 
-| Tabela | Origem | Usado em |
-| :--- | :--- | :--- |
-| `tb_catalogo`, `tb_vendas` | Sintéticos E1 | baseline (prompt), workflow (engine) |
-| `tb_claims` | PDPs curadas; manifest `data/claims_manifest.json` | workflow passo 3 |
-| `tb_inventory` | Snapshot 2026-09-01 | workflow passo 2, 5 |
+| Artefato | Uso |
+| :--- | :--- |
+| `tb_catalogo`, `tb_vendas` | baseline + engine |
+| `tb_claims`, `tb_inventory` | engine passos 2–5 |
+| `data/kb/faq.pdf`, `revenda.md` | RAG FAQ (LangChain: `PyPDFLoader` + `RecursiveCharacterTextSplitter`; PDF 1024/120, revenda 512/60; MiniLM + FAISS COSINE; k=5) |
+| `data/indexes/` | FAISS claims+FAQ (gitignored; `make data`) |
 
-Regenerar: `make data`.
-
-Golden-set: `data/golden/cases.json` — T01–T30 imutáveis; T31–T38 acrescentados no E2. Hash: `golden_revision` em cada run.
+Regenerar: `make data` (CSVs **e** índices). O MiniLM autentica no Hugging Face Hub com `HF_TOKEN` (exportado do `.env` pelo Makefile e por `export_hf_token()`).
 
 ---
 
 ## Evidência de eval
 
-Comparação principal E2 (baseline reexecutado vs workflow, mesmo `gemini-3.5-flash-lite`, mesma sessão 2026-09-13):
-
 | Artefato | Conteúdo |
 | :--- | :--- |
-| [eval/notebooks/E2_workflow.ipynb](../eval/notebooks/E2_workflow.ipynb) | Relatório completo: hipótese, comparação, interpretação F.1, modos de falha |
-| [eval/runs/00b767134d22.json](../eval/runs/00b767134d22.json) | Manifest **baseline** — campo `resumo` |
-| [eval/runs/d79563e06651.json](../eval/runs/d79563e06651.json) | Manifest **workflow** — campo `resumo` |
-| [eval/notebooks/E1_baseline.ipynb](../eval/notebooks/E1_baseline.ipynb) | Relatório E1 (30 casos, régua original) |
+| [E2_workflow.ipynb](../eval/notebooks/E2_workflow.ipynb) | Comparação E1×E2 (régua então vigente) |
+| [E3_evaluation.ipynb](../eval/notebooks/E3_evaluation.ipynb) | Seções A–J + régua `e3_*`; `run_eval` das três arches |
+| [E1_baseline.ipynb](../eval/notebooks/E1_baseline.ipynb) | Relatório E1 (intacto) |
 
-Cada manifest registra: `run_id`, `architecture_id`, `golden_revision`, `git_sha`, latência, tokens, `tool_calls`, `scoring_trace` por caso.
-
-**Resumo executivo (não substitui os JSONs):** workflow supera baseline na mesma régua E2 (+22 acertos gerais, −97% custo estimado, −58% latência mediana); detalhes e ressalvas (n=38, gabarito recalculado) estão no notebook E2 seção F.1.
+Runs JSON em `eval/runs/` (gitignore). Sem API key, o notebook documenta o caminho e os testes unitários substituem o smoke da régua.
 
 ---
 
@@ -283,35 +197,36 @@ Cada manifest registra: `run_id`, `architecture_id`, `golden_revision`, `git_sha
 
 | Canal | O quê |
 | :--- | :--- |
-| `ScoreTrace` | Cada inclusão/exclusão/bônus por SKU e passo |
-| Manifest `eval/runs/*.json` | Métricas agregadas + trace por caso |
-| CLI `/trace` | JSON do último scoring na sessão |
-| CLI `/reset` | Limpa checkpoint do `thread_id` |
+| `AgentTrace` | latência, LLM, tools, tokens por `agent_id` |
+| `ScoreTrace` | bônus/exclusões do engine |
+| CLI `/trace` | output + traces de agente e scoring |
+| Manifest | `resumo` legado + `resumo_v3` |
 
 ---
 
 ## Executar
 
 ```bash
-make chat ARCH=current    # vigente → workflow (via config.CURRENT_ARCH)
+make chat                 # vigente → multiagent (ARCH=current)
 make chat ARCH=workflow
-make chat ARCH=baseline   # Makefile default se omitir ARCH
-make data
+make chat ARCH=baseline
+make data                 # CSVs + FAISS
 ```
 
-Golden-set: notebooks em `eval/notebooks/` chamam `eval.runner.run_eval` — não há alvo `make eval`.
+Golden-set: `eval/notebooks/E3_evaluation.ipynb` chama `eval.runner.run_eval` — não há `make eval`.
 
 ---
 
-## Deliberadamente fora do E2
+## Deliberadamente fora do E3
 
-| Peça | Motivo | Roadmap |
-| :--- | :--- | :--- |
-| `sanitize_pii` / guardrails | T26–T30 = gaps documentados | E3 — agente segurança |
-| Match claims semântico | Substring `_claim_match` frágil | E3 — agente claims |
-| MCP | Sem reuso multi-agente medido | E3+ se fonte externa compartilhada |
-| RAG vetorial | Não necessário ao catálogo tabular | — |
-| ReAct | Custo + não-determinismo no scoring | Rejeitado ADR 0002 |
+| Peça | Motivo |
+| :--- | :--- |
+| MCP | Sem reuso nem fronteira |
+| Agente LLM de segurança / claims | Nós/tools determinísticos bastam |
+| Pacote `recfair/skills/` | Dict inline atende o enunciado |
+| Correção de intent/memória T09/T31 | Fora de escopo medido |
+| nDCG no runtime | Só no pacote `eval/` |
+| T44–T46 | Pós-MVP |
 
 ---
 
@@ -320,4 +235,5 @@ Golden-set: notebooks em `eval/notebooks/` chamam `eval.runner.run_eval` — nã
 | id | data | ADR | Status |
 | :--- | :--- | :--- | :--- |
 | `baseline` | 2026-09-07 | [0001](adr/0001-baseline.md) | executável (`ARCH=baseline`) |
-| `workflow` | 2026-09-13 | [0002](adr/0002-workflow-scoring.md) | **vigente** (`CURRENT_ARCH`) |
+| `workflow` | 2026-09-13 | [0002](adr/0002-workflow-scoring.md) | executável (`ARCH=workflow`) |
+| `multiagent` | 2026-09-19 | [0003](adr/0003-multiagent-supervisor.md) | **vigente** (`CURRENT_ARCH`) |

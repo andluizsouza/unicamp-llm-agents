@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from recfair.config import N_RECOMMEND
@@ -50,8 +51,22 @@ def _claim_match(sku: str, terms: list[str]) -> str | None:
     return None
 
 
-def score_recommendation(intent: ParsedIntent) -> ScoringResult:
-    """Run the seven-step scoring pipeline and return Top-N SKUs."""
+ClaimMatcher = Callable[[str, list[str]], str | None]
+
+
+def score_recommendation(
+    intent: ParsedIntent,
+    *,
+    claim_matcher: ClaimMatcher | None = None,
+) -> ScoringResult:
+    """Run the seven-step scoring pipeline and return Top-N SKUs.
+
+    Args:
+        intent: Parsed filters from NL or golden-case metadata.
+        claim_matcher: Optional replacement for substring claim matching.
+            Default keeps E2/gold behaviour (``_claim_match``). The multiagent
+            path injects semantic matching without changing the workflow.
+    """
     trace = ScoreTrace()
     tool_calls = 0
 
@@ -121,9 +136,10 @@ def score_recommendation(intent: ParsedIntent) -> ScoringResult:
 
     # Step 3: score claims (+2)
     tool_calls += 1
+    matcher = claim_matcher or _claim_match
     if intent.claim_terms:
         for sku in pool:
-            matched = _claim_match(sku, intent.claim_terms)
+            matched = matcher(sku, intent.claim_terms)
             if matched:
                 points[sku] += 2
                 trace.log(

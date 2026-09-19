@@ -8,4 +8,5 @@ __pycache__/
 .ruff_cache/
 eval/runs/*.json
 *.db
+data/indexes/
 .DS_Store

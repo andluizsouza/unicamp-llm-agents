@@ -10,8 +10,9 @@ Sistema de recomendação com contrato **utilidade + justiça** para catálogo d
 - Devolve **Top 5** SKUs ranqueados por regras de negócio **ou** abstenção (`RecFairOutput`).
 - Mede qualidade em golden-set congelado (`data/golden/cases.json`) com verify automático (`eval/verify.py`).
 
-**Arquitetura vigente (E2):** `workflow` — LangGraph + scoring determinístico.  
-**Baseline (E1):** `baseline` — uma chamada LLM com catálogo/vendas no prompt. Ambas executáveis.
+**Arquitetura vigente (E3):** `multiagent` — supervisor + recomendação + FAQ.  
+**E2 (executável):** `workflow` — LangGraph + scoring determinístico.  
+**Baseline (E1):** `baseline` — uma chamada LLM com catálogo/vendas no prompt. As três executáveis.
 
 ---
 
@@ -23,7 +24,7 @@ Requisito: **Python 3.14**. Guia passo a passo: [`docs/INSTALL.md`](docs/INSTALL
 cd recfair
 python3.14 -m venv venv-recfair
 source venv-recfair/bin/activate
-cp .env.example .env          # GOOGLE_API_KEY
+cp .env.example .env          # GOOGLE_API_KEY e HF_TOKEN
 make install-dev
 make kernel                   # Jupyter: kernel "Python (recfair)"
 ```
@@ -38,8 +39,16 @@ Notebooks são **somente relatório** — importam o pacote, não implementam o 
 | :--- | :--- | :--- | :--- |
 | **E1** | [`eval/notebooks/E1_baseline.ipynb`](eval/notebooks/E1_baseline.ipynb) | `baseline` | Baseline stuffing, 30 casos |
 | **E2** | [`eval/notebooks/E2_workflow.ipynb`](eval/notebooks/E2_workflow.ipynb) | `baseline` × `workflow` | Comparação, memória, tools, ADR |
+| **E3** | [`eval/notebooks/E3_evaluation.ipynb`](eval/notebooks/E3_evaluation.ipynb) | `baseline` × `workflow` × `multiagent` | Supervisor, FAQ, régua nDCG@5 |
 
-Reproduzir eval: abrir notebook E2 e executar células com `run_eval(arch=...)`.
+Reproduzir eval: abrir o notebook da entrega e executar células com `run_eval(arch=...)`. Requer `GOOGLE_API_KEY`. `make data` (índices MiniLM) requer `HF_TOKEN`. Sem as chaves, `make lint` e `pytest` cobrem a régua e os contratos.
+
+```bash
+make data    # CSVs + índices FAISS (claims e FAQ) — exporta HF_TOKEN do .env
+make chat    # vigente = multiagent
+make chat ARCH=workflow
+make chat ARCH=baseline
+```
 
 ---
 
@@ -51,18 +60,20 @@ recfair/                          ← raiz do app (abra esta pasta no IDE)
 ├── Makefile                      ← install, chat, lint, data, kernel
 ├── requirements.txt
 ├── requirements-dev.txt
-├── .env.example                  ← GOOGLE_API_KEY (não commitar .env)
+├── .env.example                  ← GOOGLE_API_KEY + HF_TOKEN (não commitar .env)
 │
 ├── recfair/                      ← pacote Python (runtime)
 │   ├── cli.py                    ← make chat
-│   ├── config.py                 ← CURRENT_ARCH=workflow
+│   ├── config.py                 ← CURRENT_ARCH=multiagent
 │   ├── graphs/
 │   │   ├── baseline.py           ← E1
 │   │   ├── registry.py
-│   │   └── workflow/             ← E2 LangGraph
+│   │   ├── workflow/             ← E2 LangGraph
+│   │   └── multiagent/           ← E3 supervisor
 │   ├── tools/scoring/            ← engine.py (ranking determinístico)
-│   ├── schemas/                  ← RecFairOutput, ParsedIntent
-│   ├── prompts/                  ← baseline_v1, workflow_v2
+│   ├── rag/                      ← FAQ FAISS
+│   ├── schemas/                  ← RecFairOutput, ParsedIntent, RoutingDecision
+│   ├── prompts/                  ← baseline_v1, workflow_v2, multiagent_v3
 │   ├── data/                     ← gera CSV/SQLite
 │   └── observability/
 │
@@ -100,10 +111,11 @@ Ambiente virtual: `venv-recfair/` (criado localmente, não versionado).
 | :--- | :--- | :--- | :--- |
 | `baseline` | E1 | 1× LLM, stuffing CSV, sem tools | [0001](docs/adr/0001-baseline.md) |
 | `workflow` | E2 | LangGraph, intent LLM + scoring 7 passos, memória | [0002](docs/adr/0002-workflow-scoring.md) |
+| `multiagent` | E3 | Supervisor + FAQ RAG + guardrail + claims embed | [0003](docs/adr/0003-multiagent-supervisor.md) |
 
-Mapa completo com diagramas: [`docs/architecture.md`](docs/architecture.md).
+Mapa completo com diagramas: [`docs/architecture.md`](docs/architecture.md). Régua E3: [0004](docs/adr/0004-layered-evaluation-metrics.md).
 
-`recfair.config.CURRENT_ARCH` = **`workflow`**. Use `make chat ARCH=current` ou `ARCH=workflow`.
+`recfair.config.CURRENT_ARCH` = **`multiagent`**. `make chat` (sem `ARCH`) usa a vigente. Baseline: `make chat ARCH=baseline`.
 
 ---
 
@@ -115,19 +127,19 @@ Mapa completo com diagramas: [`docs/architecture.md`](docs/architecture.md).
 | `make install` / `make install-dev` | Dependências |
 | `make chat ARCH=<id>` | UI terminal |
 | `make lint` / `make format` | Ruff |
-| `make data` | Regenera CSVs |
+| `make data` | Regenera CSVs e índices FAISS (claims + FAQ) |
 | `make kernel` | Kernel Jupyter |
 
 Não há `make eval` — golden-set roda nos notebooks via `eval.runner.run_eval`.
 
 ---
 
-## Evolução prevista (E3+)
+## Evolução prevista (E4+)
 
-Documentado em [`docs/architecture.md`](docs/architecture.md) e ADR 0002:
+Documentado em [`docs/architecture.md`](docs/architecture.md) e ADR 0003:
 
-- Agente especializado **match de claims** (substituir regex).
-- Agente **segurança/privacidade** + guardrails (T26–T30).
-- MCP opcional se houver integração externa compartilhada.
+- Correção de intent/memória (T09, T31) se o Painel A exigir.
+- T44–T46 (handoff por FAQ sem evidência, paráfrases de claims) se o eval mostrar gap.
+- MCP só com reuso ou fronteira de permissão medida.
 
 ---

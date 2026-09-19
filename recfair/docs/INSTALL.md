@@ -65,7 +65,19 @@ O `pip install -e .` registra os pacotes `recfair` e `eval` em modo editável.
 cp .env.example .env
 ```
 
-Edite `.env` e defina `GOOGLE_API_KEY` (ou `GEMINI_API_KEY`).
+Edite `.env` e defina:
+
+| Variável | Uso |
+| :--- | :--- |
+| `GOOGLE_API_KEY` (ou `GEMINI_API_KEY`) | Gemini — `make chat` e `run_eval` no notebook |
+| `HF_TOKEN` | Hugging Face Hub — download autenticado do MiniLM (`make data`, FAQ RAG, claims semânticos) |
+
+O runtime **exporta** essas variáveis de duas formas (nenhuma imprime o valor):
+
+1. **Makefile** (`make data`, `make chat`) — `set -a; . ./.env` no shell da receita.
+2. **Python** — `recfair.config.apply_dotenv()` lê o `.env` e `export_hf_token()` replica `HF_TOKEN` em `HUGGING_FACE_HUB_TOKEN` (o que o Hub espera). `SentenceTransformer` e `HuggingFaceEmbeddings` recebem `token=` na construção do modelo.
+
+Token Hugging Face: [settings/tokens](https://huggingface.co/settings/tokens) (escopo de leitura basta). Não commitar `.env`.
 
 ## 5. Cursor / VS Code e notebooks
 
@@ -84,20 +96,24 @@ Depois:
 ## 6. Verificar instalação
 
 ```bash
-make chat ARCH=current    # arquitetura vigente (workflow) — requer GOOGLE_API_KEY
-make chat ARCH=baseline   # baseline E1
+make data                 # CSVs + índices FAISS — requer HF_TOKEN
+make chat                 # vigente = multiagent — requer GOOGLE_API_KEY
+make chat ARCH=workflow   # E2
+make chat ARCH=baseline   # E1
 ```
 
 Mapa do repositório: [`README.md`](../README.md). Arquitetura: [`docs/architecture.md`](architecture.md).
 
-Relatórios de eval: [`eval/notebooks/E1_baseline.ipynb`](../eval/notebooks/E1_baseline.ipynb) · [`eval/notebooks/E2_workflow.ipynb`](../eval/notebooks/E2_workflow.ipynb).
+Relatórios de eval: [`eval/notebooks/E1_baseline.ipynb`](../eval/notebooks/E1_baseline.ipynb) · [`eval/notebooks/E2_workflow.ipynb`](../eval/notebooks/E2_workflow.ipynb) · [`eval/notebooks/E3_evaluation.ipynb`](../eval/notebooks/E3_evaluation.ipynb).
+
+Sem `GOOGLE_API_KEY` o `run_eval` do notebook não roda. Sem `HF_TOKEN` o `make data` falha ao baixar o MiniLM. `pytest` e `make lint` cobrem régua, guardrails e contratos sem chaves.
 
 ## Arquivos de dependências
 
 | Arquivo | Conteúdo |
 | :--- | :--- |
-| `requirements.txt` | Runtime: langchain, langchain-google-genai, pandas, pydantic, rich |
-| `requirements-dev.txt` | Inclui runtime + ruff, jupyter, ipykernel |
+| `requirements.txt` | Runtime: langchain, langgraph, sentence-transformers, faiss-cpu, pandas, pydantic, rich |
+| `requirements-dev.txt` | Inclui runtime + ruff, jupyter, ipykernel, pytest |
 
 Bounds versionados nos arquivos; para pin exato de todas as transitivas, use `pip freeze > requirements.lock` localmente (não versionado por padrão).
 
@@ -109,3 +125,5 @@ Bounds versionados nos arquivos; para pin exato de todas as transitivas, use `pi
 | `make: python3.14: No such file` | Crie o venv manualmente com o binário correto e use `VENV=venv-recfair make install-dev` |
 | Notebook sem kernel | `make install-dev && make kernel`, depois recarregue a janela |
 | `ModuleNotFoundError: recfair` | Ative o venv e rode `pip install -e .` |
+| FAQ/claims falham com `Missing … index` | Rode `make data` (gera FAISS em `data/indexes/`, gitignored) |
+| 401 / gated Hugging Face ao baixar MiniLM | Defina `HF_TOKEN` em `.env` e rode de novo `make data` (o Makefile exporta o token) |

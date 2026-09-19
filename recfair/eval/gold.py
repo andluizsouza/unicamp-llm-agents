@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from eval.case_intent import intent_from_case
-from recfair.data.catalog import catalog_by_sku, generate_sales
+from recfair.data.catalog import catalog_by_sku, generate_sales, gold_top_n, gold_top_n_diverse
 from recfair.tools.scoring.engine import score_recommendation
 
 _SALES_ROWS = generate_sales()
@@ -42,3 +42,24 @@ def gold_for_price_cap(case: dict[str, Any], max_brl: float) -> list[str]:
         require_diversity=bool(case.get("require_diversity")),
     )
     return score_recommendation(intent).skus
+
+
+def gold_naive_for(case: dict[str, Any]) -> list[str]:
+    """E1-style gold: category/brand + 7-day popularity, no engine filters.
+
+    Ignores stock, price cap, claims and promo/launch flags so a naive
+    popularity list can be compared against the filtered gold (anti-inflation).
+    """
+    familia = case.get("familia", "")
+    if familia == "S_abstain":
+        return []
+    category = case.get("category")
+    if not category:
+        return []
+    brand = case.get("brand")
+    sales = sales_rows()
+    if case.get("require_diversity"):
+        rows = gold_top_n_diverse(sales, category=category, brand=brand)
+    else:
+        rows = gold_top_n(sales, category=category, brand=brand)
+    return [row["cod_sku"] for row in rows]

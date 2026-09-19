@@ -2,7 +2,7 @@
 
 - **Status:** aceito
 - **Data:** 2026-09-13
-- **Arquitetura:** `workflow` (`prompt_version=v2`) — **vigente** (`CURRENT_ARCH`)
+- **Arquitetura:** `workflow` (`prompt_version=v2`) — executável via `ARCH=workflow` (não é mais `CURRENT_ARCH`; vigente E3 = `multiagent`, ADR 0003)
 - **Substitui:** n/a (coexiste com `baseline`)
 
 ## Contexto
@@ -129,11 +129,9 @@ Relatório interpretado: [`eval/notebooks/E2_workflow.ipynb`](../../eval/noteboo
 - `_claim_match`: substring literal — candidato a agente E3.
 - Entrada NL não confiável ainda alcança `parse_intent` sem filtro de segurança.
 
-## Próximo incremento (E3 — não implementado)
+## Próximo incremento
 
-1. **Agente match de claims** — similaridade semântica vs regex.
-2. **Agente segurança/privacidade** — `sanitize_pii`, anti-injection/jailbreak antes do intent.
-3. MCP **opcional** se integração externa ao vivo for compartilhada por múltiplos agentes.
+Implementado no E3: ADR [0003](0003-multiagent-supervisor.md) (supervisor) e [0004](0004-layered-evaluation-metrics.md) (régua nDCG@5). MCP continua fora.
 
 ## Evidência / reavaliação
 

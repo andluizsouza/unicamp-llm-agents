@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Any
 
 from eval.fingerprint import golden_revision, load_cases
-from eval.report import summarize_records
+from eval.report import summarize_records, summarize_records_v3
 from eval.verify import (
     diagnose_failure,
     final_status,
@@ -21,11 +21,14 @@ from recfair.config import (
     TEMPERATURE,
     apply_dotenv,
     ensure_google_api_key,
+    export_hf_token,
     model_version,
 )
-from recfair.graphs import baseline, workflow
+from recfair.graphs import baseline, multiagent, workflow
 from recfair.graphs.registry import get_runner
 from recfair.observability.run_record import git_sha, new_run_id, run_started_at, save_run
+
+_THREADED = frozenset({workflow.architecture_id(), multiagent.architecture_id()})
 
 
 def _architecture_date(arch_id: str) -> str:
@@ -33,6 +36,8 @@ def _architecture_date(arch_id: str) -> str:
         return baseline.architecture_date()
     if arch_id == workflow.architecture_id():
         return workflow.architecture_date()
+    if arch_id == multiagent.architecture_id():
+        return multiagent.architecture_date()
     return ARCHITECTURE_DATES.get(arch_id, datetime.now().date().isoformat())
 
 
@@ -41,7 +46,17 @@ def _prompt_version(arch_id: str) -> str:
         return baseline.prompt_version()
     if arch_id == workflow.architecture_id():
         return workflow.prompt_version()
+    if arch_id == multiagent.architecture_id():
+        return multiagent.prompt_version()
     return baseline.prompt_version()
+
+
+def _experiment_for(arch_id: str) -> str:
+    if arch_id == multiagent.architecture_id():
+        return "e3"
+    if arch_id == workflow.architecture_id():
+        return "e2"
+    return "e1"
 
 
 def _sum_optional_tokens(left: int | None, right: int | None) -> int | None:
@@ -63,16 +78,35 @@ def _merge_metrics(acc: Any, new: Any) -> Any:
     trace_b = getattr(new, "scoring_trace", None) or []
     if trace_b:
         acc.scoring_trace = trace_a + trace_b
+    agents_a = getattr(acc, "agent_traces", None) or []
+    agents_b = getattr(new, "agent_traces", None) or []
+    if agents_b:
+        acc.agent_traces = agents_a + agents_b
+    route_b = getattr(new, "agents_route", None) or []
+    if route_b:
+        acc.agents_route = route_b
+    plan_b = getattr(new, "routing_plan", None) or []
+    if plan_b:
+        acc.routing_plan = plan_b
+    if getattr(new, "replanned", False):
+        acc.replanned = True
     return acc
+
+
+def _reset_thread(arch_id: str, thread_id: str) -> None:
+    if arch_id == workflow.architecture_id():
+        workflow.reset_checkpoint(thread_id)
+    elif arch_id == multiagent.architecture_id():
+        multiagent.reset_checkpoint(thread_id)
 
 
 def _run_case(runner: Any, case: dict[str, Any], arch_id: str) -> tuple[Any, Any]:
     """Run single-shot or multi-turn case."""
     turns = case.get("turns")
     if turns:
-        tid = case["id"] if arch_id == workflow.architecture_id() else None
+        tid = case["id"] if arch_id in _THREADED else None
         if tid:
-            workflow.reset_checkpoint(tid)
+            _reset_thread(arch_id, tid)
         output = None
         metrics = None
         for turn in turns:
@@ -82,6 +116,9 @@ def _run_case(runner: Any, case: dict[str, Any], arch_id: str) -> tuple[Any, Any
                 output, step_metrics = runner(turn)
             metrics = _merge_metrics(metrics, step_metrics)
         return output, metrics
+    if arch_id in _THREADED:
+        _reset_thread(arch_id, case["id"])
+        return runner(case["entrada"], thread_id=case["id"])
     return runner(case["entrada"])
 
 
@@ -90,14 +127,26 @@ def run_eval(
     *,
     persist: bool = True,
     experiment: str | None = None,
+    cases: list[dict[str, Any]] | None = None,
+    fast_mode: bool = False,
 ) -> dict[str, Any]:
-    """Execute all golden cases and return run manifest."""
+    """Execute golden cases and return run manifest.
+
+    Args:
+        arch: Architecture id passed to the graph registry.
+        persist: Write manifest JSON under ``eval/runs/``.
+        experiment: Override experiment label for success/failure messages.
+        cases: Optional subset of golden cases (e.g. fast debug sample).
+        fast_mode: When True, recorded in the manifest for report disclaimers.
+    """
     apply_dotenv()
     ensure_google_api_key()
+    export_hf_token()
     arch_id, runner = get_runner(arch)
-    exp = experiment or ("e2" if arch_id == workflow.architecture_id() else "e1")
-    cases = load_cases()
-    revision = golden_revision(cases)
+    exp = experiment or _experiment_for(arch_id)
+    all_cases = load_cases()
+    revision = golden_revision(all_cases)
+    cases = cases if cases is not None else all_cases
     run_id = new_run_id()
     records: list[dict[str, Any]] = []
 
@@ -118,6 +167,7 @@ def run_eval(
         )
 
     resumo = summarize_records(records)
+    resumo_v3 = summarize_records_v3(records)
     manifest: dict[str, Any] = {
         "run_id": run_id,
         "architecture_id": arch_id,
@@ -128,9 +178,13 @@ def run_eval(
         "temperature": TEMPERATURE,
         "prompt_version": _prompt_version(arch_id),
         "golden_revision": revision,
+        "fast_mode": fast_mode,
+        "cases_run": len(cases),
+        "case_ids": [case["id"] for case in cases],
         "started_at": run_started_at(),
         "python": platform.python_version(),
         "resumo": resumo,
+        "resumo_v3": resumo_v3,
         "records": records,
     }
     if persist:

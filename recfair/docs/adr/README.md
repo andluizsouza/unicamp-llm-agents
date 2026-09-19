@@ -5,6 +5,8 @@ Decisões arquiteturais datadas. Índice canônico — detalhes técnicos e diag
 | Número | Título | Arquitetura | Data | Status |
 | :---: | :--- | :--- | :--- | :--- |
 | 0001 | [Baseline stuffing](0001-baseline.md) | `baseline` | 2026-09-07 | aceito |
-| 0002 | [Workflow scoring determinístico](0002-workflow-scoring.md) | `workflow` | 2026-09-13 | aceito (vigente) |
+| 0002 | [Workflow scoring determinístico](0002-workflow-scoring.md) | `workflow` | 2026-09-13 | aceito (executável) |
+| 0003 | [Supervisor multiagente](0003-multiagent-supervisor.md) | `multiagent` | 2026-09-19 | aceito (vigente) |
+| 0004 | [Régua nDCG@5 + RF + anti-inflação](0004-layered-evaluation-metrics.md) | eval | 2026-09-19 | aceito |
 
-**Convenção:** nova peça (grafo, tool, MCP, memória, guardrail) → novo ADR numerado + atualizar `docs/architecture.md` no mesmo conjunto de mudanças.
+**Convenção:** nova peça (grafo, tool, MCP, memória, guardrail) → novo ADR numerado + atualizar `docs/architecture.md` no mesmo conjunto de mudanças. Mudança de critério de comparação → ADR próprio (0004), sem promover runtime.
