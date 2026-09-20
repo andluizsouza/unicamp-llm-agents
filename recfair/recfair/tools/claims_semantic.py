@@ -85,8 +85,3 @@ def match_substring_or_semantic(sku: str, terms: list[str]) -> str | None:
     if hit:
         return hit
     return _semantic_match_sku(sku, terms)
-
-
-def match_claims_semantic(sku: str, terms: list[str]) -> str | None:
-    """Semantic-only matcher (tests and legacy callers)."""
-    return _semantic_match_sku(sku, terms)

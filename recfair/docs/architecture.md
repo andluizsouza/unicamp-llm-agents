@@ -1,11 +1,10 @@
 # Arquitetura RecFair
 
 **Última atualização:** 2026-09-19  
-**Arquitetura vigente (`CURRENT_ARCH`):** `multiagent` · data 2026-09-19 · ADR [0003](adr/0003-multiagent-supervisor.md)  
-**Ainda executáveis:** `workflow` · 2026-09-13 · ADR [0002](adr/0002-workflow-scoring.md) · `baseline` · 2026-09-07 · ADR [0001](adr/0001-baseline.md)  
-**Régua E3:** ADR [0004](adr/0004-layered-evaluation-metrics.md) (nDCG@5 no pacote `eval/`, não no runtime)
+**Arquitetura vigente (`CURRENT_ARCH`):** `multiagent` · data 2026-09-19 · ADR [0003](adr/0003-multiagent-supervisor.md) (E3 completo: runtime + régua + roteamento)  
+**Ainda executáveis:** `workflow` · 2026-09-13 · ADR [0002](adr/0002-workflow-scoring.md) · `baseline` · 2026-09-07 · ADR [0001](adr/0001-baseline.md)
 
-RecFair é um assistente de recomendação Top-5 para catálogo de beleza (Grupo Boticário, dados sintéticos), agora também com FAQ de e-commerce/revenda e transbordo humano. Toda arquitetura expõe `RecFairOutput` e é medida pelo golden-set em `data/golden/cases.json`.
+RecFair é um assistente de recomendação Top-5 para catálogo de beleza (Grupo Boticário, dados sintéticos), agora também com FAQ de e-commerce/revenda, transbordo humano e redirecionamento fora de contexto. Toda arquitetura expõe `RecFairOutput` e é medida pelo golden-set em `data/golden/cases.json` (**60 casos**, T01–T60).
 
 ---
 
@@ -13,15 +12,15 @@ RecFair é um assistente de recomendação Top-5 para catálogo de beleza (Grupo
 
 | | `baseline` (E1) | `workflow` (E2) | `multiagent` (E3, vigente) |
 | :--- | :--- | :--- | :--- |
-| **Padrão** | Monolito — 1× LLM | LangGraph — LLM só em `parse_intent` | Supervisor — 3 agentes + 2 nós |
+| **Padrão** | Monolito — 1× LLM | LangGraph — LLM só em `parse_intent` | Supervisor — 3 agentes + 3 nós |
 | **Dados no prompt** | Catálogo + vendas (~29k tokens) | Query NL | Query sanitizada + skills index / FAQ chunks |
 | **Ranking** | Modelo no prompt | `engine.py` (substring claims) | Mesmo engine E2; `semantic_fallback` só se substring falha no pool |
 | **Guardrail** | Não | Não | `security_node` regex/redact |
-| **FAQ / handoff** | Não | Não | Agente FAQ + nó template `0800-000-0000` |
+| **FAQ / handoff / out_of_context** | Não | Não | Agente FAQ + nós template (telefone / redirecionamento) |
 | **Memória** | Stateless | `MemorySaver` | `MemorySaver` (mesmo recorte) |
 | **Prompt** | `baseline_v1` | `workflow_v2` | `multiagent_v3` + intent v2 |
 | **ADR** | [0001](adr/0001-baseline.md) | [0002](adr/0002-workflow-scoring.md) | [0003](adr/0003-multiagent-supervisor.md) |
-| **Relatório eval** | [E1_baseline.ipynb](../eval/notebooks/E1_baseline.ipynb) | [E2_workflow.ipynb](../eval/notebooks/E2_workflow.ipynb) | [E3_evaluation.ipynb](../eval/notebooks/E3_evaluation.ipynb) |
+| **Relatório eval** | [E1_baseline.ipynb](../eval/notebooks/E1_baseline.ipynb) | [E2_workflow.ipynb](../eval/notebooks/E2_workflow.ipynb) | [E3_multiagents.ipynb](../eval/notebooks/E3_multiagents.ipynb) |
 
 ---
 
@@ -37,11 +36,11 @@ recfair/
 │   ├── workflow/               # E2 — intocado no incremento
 │   └── multiagent/             # E3
 │       ├── skills.py           # dict SKILLS inline
-│       └── nodes/              # security, supervisor, recommend, faq, handoff
+│       └── nodes/              # security, supervisor, recommend, faq, handoff, out_of_context
 ├── tools/
 │   ├── scoring/engine.py       # claim_matcher opcional (default = E2)
 │   ├── guardrails.py
-│   └── claims_semantic.py
+│   └── claims_semantic.py      # match_substring_or_semantic
 ├── rag/                        # FAISS FAQ + build_indexes
 ├── schemas/                    # RecFairOutput, ParsedIntent, RoutingDecision
 ├── prompts/                    # baseline_v1, workflow_v2, multiagent_v3
@@ -49,11 +48,14 @@ recfair/
 
 eval/
 ├── runner.py                   # run_eval + resumo_v3
-├── verify.py                   # legado + famílias E3 + campos v3
 ├── metrics.py                  # ndcg_at_5, classify_severity
 ├── requirements.py             # RF-01–RF-07
 ├── gold.py                     # gold_for + gold_naive_for
-└── notebooks/E3_evaluation.ipynb
+├── contexts.py                 # contextos H.1–H.4
+├── glossary.py                 # glossário de métricas
+├── verify/                     # verify_case, famílias E3, campos v3
+├── report/                     # painéis HTML para notebooks
+└── notebooks/E3_multiagents.ipynb
 ```
 
 ---
@@ -62,9 +64,9 @@ eval/
 
 **Objetivo:** atacar domínio único, claims substring e ausência de guardrail **sem** reescrever o ranking E2.
 
-**Ganho esperado:** T26–T30 com sanitização real; T39–T43 (FAQ/rota/handoff) >0%; T18/T21/T22 parciais. Painel A (T01–T38) pode empatar ou cair 0–2 pp por roteamento — resultado válido.
+**Ganho esperado:** T26–T30 com sanitização real; T39–T60 (FAQ/roteamento/handoff/out_of_context) >0%; T18/T21/T22 parciais. Painel A (T01–T38) pode empatar ou cair 0–2 pp por roteamento — resultado válido.
 
-**Resultado de eval ponta a ponta:** pendente de `GOOGLE_API_KEY` na sessão de correção. Testes unitários da régua e dos guardrails não usam LLM.
+**Resultado de eval ponta a ponta:** documentado em [`eval/notebooks/E3_multiagents.ipynb`](../eval/notebooks/E3_multiagents.ipynb) (seção H). Testes unitários da régua e dos guardrails não usam LLM.
 
 ### Grafo LangGraph
 
@@ -88,11 +90,11 @@ flowchart TD
 
 ### Por que segurança, out_of_context e handoff não são agentes
 
-Não passam no teste de 4 colunas (escopo / tools / instrução / avaliação isolada): são regex+redact e templates fixos, sem raciocínio LLM. `out_of_context` redireciona perguntas externas; `handoff` transborda in-contexto com telefone (ADR 0005).
+Não passam no teste de 4 colunas (escopo / tools / instrução / avaliação isolada): são regex+redact e templates fixos, sem raciocínio LLM. `out_of_context` redireciona perguntas externas; `handoff` transborda in-contexto com telefone (ADR 0003 §3.3).
 
 ### Pipeline de recomendação (interno ao especialista)
 
-Reusa `parse_intent` E2 + `score_recommendation(..., semantic_fallback=True)` + synthesize. Substring é a régua (igual E2/gold); fallback semântico por SKU só quando nenhum item do pool acerta substring. Oráculos de paráfrase ficam em `tests/test_claims_semantic.py`, fora do H.1.
+Reusa `parse_intent` E2 + `score_recommendation(..., semantic_fallback=True)` + synthesize. Substring é a régua (igual E2/gold); fallback semântico via `match_substring_or_semantic` por SKU só quando nenhum item do pool acerta substring. Oráculos de paráfrase ficam em `tests/test_claims_semantic.py`, fora do H.1.
 
 ### Memória
 
@@ -100,7 +102,7 @@ Mesmo recorte E2: `MemorySaver` + `thread_id` → `session_intent`. T09/T31 **n�
 
 ### Tools locais vs MCP
 
-Guardrail, claims embed, retrieve_faq e scoring são funções in-process. MCP recusado: um consumidor, dados empacotados, sem fronteira de permissão (ADR 0003).
+Guardrail (`sanitize_query`), claims embed, retrieve_faq e scoring são funções in-process. MCP recusado: um consumidor, dados empacotados, sem fronteira de permissão (ADR 0003).
 
 ---
 
@@ -153,20 +155,36 @@ Contrato entre agentes: `RoutingDecision` e `AgentResult` em `schemas/routing.py
 
 ---
 
-## Avaliação (ADR 0004)
+## Avaliação (ADR 0003 §3.2)
 
 Régua principal E3: **nDCG@5** (média por escopo) + `aprovado_exact` + `severity` + breakdown RF-01–RF-07 + `gap_intentional_pass` em T16–T30.
 
-Escopos: `restrict_core` T01–T15 · `gap` T16–T30 · `memory` T31–T33 · `scoring` T34–T38 · `overall` T01–T38.
+Escopos legado (T01–T38): `restrict_core` T01–T15 · `gap` T16–T30 · `memory` T31–T33 · `scoring` T34–T38 · `overall` T01–T38.
 
-Painéis experimentais do notebook E3:
+### Contextos de avaliação E3 (H.1–H.4)
 
-- **A — congelado:** T01–T38 (comparável ao E2)
-- **B — expandido:** T01–T43 (FAQ/routing/handoff)
+Definidos em `eval/contexts.py`:
+
+```mermaid
+flowchart LR
+    H1[H.1 recomendacao] --> T01_T38[T01-T38]
+    H2[H.2 seguranca] --> T26_T30[T26-T30]
+    H3[H.3 faq] --> T39_T51[T39-T51]
+    H4[H.4 roteamento] --> T41_T60[T41-T60]
+```
+
+| Contexto | Casos | Arquiteturas medidas |
+| :--- | :--- | :--- |
+| `recomendacao` | T01–T38 | baseline, workflow, multiagent |
+| `seguranca` | T26–T30 | baseline, workflow, multiagent |
+| `faq` | T39–T51 | multiagent |
+| `roteamento` | T41–T60 | multiagent |
+
+Painel A (T01–T38) permanece congelado para comparação com E2. Painéis H.1–H.4 organizam o notebook E3 por contexto.
 
 `e1_rate_*` / `e2_rate_*` permanecem no manifest. Métricas **não** vivem no notebook.
 
-Golden-set: T01–T38 imutáveis; T39–T43 acrescentados. Hash `golden_revision` em cada run.
+Golden-set: T01–T38 imutáveis; T39–T60 acrescentados em fases (ver ADR 0003 §4.4). Hash `golden_revision` em cada run.
 
 ---
 
@@ -188,7 +206,7 @@ Regenerar: `make data` (CSVs **e** índices). O MiniLM autentica no Hugging Face
 | Artefato | Conteúdo |
 | :--- | :--- |
 | [E2_workflow.ipynb](../eval/notebooks/E2_workflow.ipynb) | Comparação E1×E2 (régua então vigente) |
-| [E3_evaluation.ipynb](../eval/notebooks/E3_evaluation.ipynb) | Seções A–J + régua `e3_*`; `run_eval` das três arches |
+| [E3_multiagents.ipynb](../eval/notebooks/E3_multiagents.ipynb) | Seções A–J + contextos H.1–H.4 + régua `e3_*`; `run_eval` das três arches |
 | [E1_baseline.ipynb](../eval/notebooks/E1_baseline.ipynb) | Relatório E1 (intacto) |
 
 Runs JSON em `eval/runs/` (gitignore). Sem API key, o notebook documenta o caminho e os testes unitários substituem o smoke da régua.
@@ -215,7 +233,7 @@ make chat ARCH=baseline
 make data                 # CSVs + FAISS
 ```
 
-Golden-set: `eval/notebooks/E3_evaluation.ipynb` chama `eval.runner.run_eval` — não há `make eval`.
+Golden-set: [`eval/notebooks/E3_multiagents.ipynb`](../eval/notebooks/E3_multiagents.ipynb) chama `eval.runner.run_eval` — não há `make eval`.
 
 ---
 
@@ -228,7 +246,7 @@ Golden-set: `eval/notebooks/E3_evaluation.ipynb` chama `eval.runner.run_eval` �
 | Pacote `recfair/skills/` | Dict inline atende o enunciado |
 | Correção de intent/memória T09/T31 | Fora de escopo medido |
 | nDCG no runtime | Só no pacote `eval/` |
-| T44–T46 | Pós-MVP |
+| T61+ | Futuro (E4+) |
 
 ---
 

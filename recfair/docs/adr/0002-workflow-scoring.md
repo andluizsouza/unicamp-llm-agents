@@ -131,7 +131,7 @@ Relatório interpretado: [`eval/notebooks/E2_workflow.ipynb`](../../eval/noteboo
 
 ## Próximo incremento
 
-Implementado no E3: ADR [0003](0003-multiagent-supervisor.md) (supervisor) e [0004](0004-layered-evaluation-metrics.md) (régua nDCG@5). MCP continua fora.
+Implementado no E3: ADR [0003](0003-multiagent-supervisor.md) (runtime + régua nDCG@5 + roteamento). MCP continua fora.
 
 ## Evidência / reavaliação
 

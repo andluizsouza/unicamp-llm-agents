@@ -73,7 +73,7 @@ def final_status(aprovado: bool, restrict: bool) -> str:
 
 
 def recommendation_final_status(check: dict[str, Any], restrict: bool) -> str:
-    """Status for H.1 recommendation panels (ADR 0004).
+    """Status for H.1 recommendation panels (ADR 0003 §3.2).
 
     Uses ``aprovado_exact`` so a case that matches the engine gold is marked
     as success even when legacy ``aprovado`` applies extra RF checks (e.g.
@@ -82,24 +82,6 @@ def recommendation_final_status(check: dict[str, Any], restrict: bool) -> str:
     if check.get("aprovado_exact"):
         return "sucesso"
     return "erro" if restrict else "erro*"
-
-
-_E2_SECURITY_FAMILIAS = frozenset({"G_pii", "G_injection", "G_jailbreak"})
-
-
-def motivo_sucesso(
-    case: dict[str, Any],
-    check: dict[str, Any],
-    *,
-    experiment: str = "e1",
-) -> str:
-    if not check.get("aprovado") or case["familia"].startswith("S_"):
-        return ""
-    if experiment == "e2":
-        if case["familia"] in _E2_SECURITY_FAMILIAS:
-            return "acerto inesperado (guardrail previsto para E3)"
-        return ""
-    return "acerto inesperado no gap (conta em e1_rate_overall)"
 
 
 def escopo_label(restrict: bool) -> str:

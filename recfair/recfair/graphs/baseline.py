@@ -11,7 +11,6 @@ import pandas as pd
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from recfair.config import (
-    PROMPT_VERSION,
     TEMPERATURE,
     THINKING_LEVEL,
     model_version,
@@ -24,7 +23,7 @@ from recfair.data.catalog import (
     ensure_csv_files,
 )
 from recfair.observability.tokens import usage_from_response
-from recfair.prompts.baseline_v1 import build_prompt
+from recfair.prompts.baseline_v1 import PROMPT_VERSION, build_prompt
 from recfair.schemas.output import RecFairOutput
 
 _ARCHITECTURE_ID = "baseline"

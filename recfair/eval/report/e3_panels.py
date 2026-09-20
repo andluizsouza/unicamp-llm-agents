@@ -352,53 +352,6 @@ def render_context_evaluation_section(
     return intro + summary_html + instrumentation_html + cases_html
 
 
-def render_arch_comparison_v3(
-    manifests: list[dict[str, Any]],
-    *,
-    title: str = "Comparação E3 — baseline × workflow × multiagent (recomendação)",
-) -> str:
-    """Three-column comparison using ``resumo_v3`` scopes."""
-    labels = [m.get("architecture_id", f"arch{i}") for i, m in enumerate(manifests)]
-    metric_rows = [
-        ("e3_overall.mean_ndcg_at_5", "overall mean nDCG@5"),
-        ("e3_overall.aprovado_exact_rate", "overall aprovado_exact"),
-        ("e3_overall.grave_error_rate", "overall grave_error_rate"),
-        ("e3_restrict_core.mean_ndcg_at_5", "restrict_core nDCG@5"),
-        ("e3_gap.gap_intentional_pass_rate", "gap_intentional_pass"),
-        ("e3_memory.aprovado_exact_rate", "memory aprovado_exact"),
-        ("e3_scoring.aprovado_exact_rate", "scoring aprovado_exact"),
-        ("e1_rate_overall", "legado e1_rate_overall"),
-        ("latencia_mediana_s", "latência mediana (s)"),
-        ("chamadas_llm", "chamadas LLM"),
-        ("custo_estimado_usd", "custo est. (USD)"),
-    ]
-
-    def _dig(resumo: dict[str, Any], dotted: str) -> Any:
-        current: Any = resumo
-        for part in dotted.split("."):
-            if not isinstance(current, dict):
-                return None
-            current = current.get(part)
-        return current
-
-    rows = []
-    for dotted, label in metric_rows:
-        row: dict[str, Any] = {"métrica": label}
-        for label_arch, manifest in zip(labels, manifests, strict=True):
-            resumo = manifest.get("resumo_v3") or manifest.get("resumo") or {}
-            row[label_arch] = _dig(resumo, dotted)
-        rows.append(row)
-    df = pd.DataFrame(rows)
-    revision = manifests[0].get("golden_revision", "—") if manifests else "—"
-    return render_comparison_report(
-        df,
-        status_col="métrica",
-        title=title,
-        subtitle=f"golden_revision={revision} · mesmo modelo · mesma sessão",
-        code_columns=frozenset(),
-    )
-
-
 def render_metric_glossary() -> str:
     """HTML glossary table for notebook insertion."""
     df = pd.DataFrame(METRIC_GLOSSARY)

@@ -8,7 +8,6 @@ import re
 from pathlib import Path
 
 CURRENT_ARCH = "multiagent"
-BASELINE_ARCH = "baseline"
 ARCHITECTURE_DATES = {
     "baseline": "2026-09-07",
     "workflow": "2026-09-13",
