@@ -58,14 +58,17 @@ def score_recommendation(
     intent: ParsedIntent,
     *,
     claim_matcher: ClaimMatcher | None = None,
+    semantic_fallback: bool = False,
 ) -> ScoringResult:
     """Run the seven-step scoring pipeline and return Top-N SKUs.
 
     Args:
         intent: Parsed filters from NL or golden-case metadata.
         claim_matcher: Optional replacement for substring claim matching.
-            Default keeps E2/gold behaviour (``_claim_match``). The multiagent
-            path injects semantic matching without changing the workflow.
+            Default keeps E2/gold behaviour (``_claim_match``).
+        semantic_fallback: When True and ``claim_matcher`` is None, use
+            substring-only unless no SKU in the pool matches via substring;
+            then fall back to per-SKU semantic matching (E3 path).
     """
     trace = ScoreTrace()
     tool_calls = 0
@@ -137,6 +140,11 @@ def score_recommendation(
     # Step 3: score claims (+2)
     tool_calls += 1
     matcher = claim_matcher or _claim_match
+    if semantic_fallback and claim_matcher is None and intent.claim_terms:
+        if not any(_claim_match(sku, intent.claim_terms) for sku in pool):
+            from recfair.tools.claims_semantic import match_substring_or_semantic
+
+            matcher = match_substring_or_semantic
     if intent.claim_terms:
         for sku in pool:
             matched = matcher(sku, intent.claim_terms)

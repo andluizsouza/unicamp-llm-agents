@@ -16,17 +16,17 @@ from eval.contexts import (
 from eval.glossary import ARCHITECTURE_LABELS, CONTEXT_SECTIONS, METRIC_GLOSSARY
 from eval.metrics import FAQ_SEMANTIC_THRESHOLD
 from eval.report.html import render_comparison_report
-from eval.report.legacy import summarize_records
 from eval.verify import (
     final_status,
     format_baseline_col,
     format_gabarito_col,
     is_restrict_scope,
+    recommendation_final_status,
 )
 
 
 def build_agent_cost_table(records: list[dict[str, Any]]) -> pd.DataFrame:
-    """Aggregate latency / LLM / tools / tokens / cost by ``agent_id``."""
+    """Per-agent averages over cases where the node was actually invoked."""
     from recfair.observability.tokens import estimate_llm_cost_usd
 
     rows: dict[str, dict[str, float]] = {}
@@ -60,16 +60,19 @@ def build_agent_cost_table(records: list[dict[str, Any]]) -> pd.DataFrame:
             bucket["n"] += 1
     data = []
     for agent_id, bucket in sorted(rows.items()):
+        n = bucket["n"]
+        if n <= 0:
+            continue
         data.append(
             {
                 "agente": agent_id,
-                "passos": int(bucket["n"]),
-                "latencia_s": round(bucket["latencia_s"], 2),
-                "chamadas_llm": int(bucket["chamadas_llm"]),
-                "tool_calls": int(bucket["tool_calls"]),
-                "tokens_entrada": int(bucket["tokens_entrada"]),
-                "tokens_saida": int(bucket["tokens_saida"]),
-                "custo_usd": round(bucket["custo_usd"], 6),
+                "casos": int(n),
+                "latencia_s": round(bucket["latencia_s"] / n, 2),
+                "chamadas_llm": round(bucket["chamadas_llm"] / n, 2),
+                "tool_calls": round(bucket["tool_calls"] / n, 2),
+                "tokens_entrada": round(bucket["tokens_entrada"] / n),
+                "tokens_saida": round(bucket["tokens_saida"] / n),
+                "custo_usd": round(bucket["custo_usd"] / n, 6),
             }
         )
     return pd.DataFrame(data)
@@ -83,12 +86,12 @@ def render_agent_cost_table(
     """HTML table of per-agent instrumentation."""
     df = build_agent_cost_table(records)
     if df.empty:
-        df = pd.DataFrame([{"agente": "—", "passos": 0, "latencia_s": 0, "chamadas_llm": 0}])
+        df = pd.DataFrame([{"agente": "—", "casos": 0, "latencia_s": 0, "chamadas_llm": 0}])
     return render_comparison_report(
         df,
         status_col="agente",
         title=title,
-        subtitle="Soma no run · security e handoff são nós determinísticos (0 LLM).",
+        subtitle="Média por run · somente casos em que o nó foi chamado · security e handoff são determinísticos (0 LLM).",
         code_columns=frozenset({"agente"}),
     )
 
@@ -105,11 +108,57 @@ def _fmt_score(value: float | None) -> str:
     return f"{value:.4f}"
 
 
+def _mean_case_instrumentation(records: list[dict[str, Any]]) -> dict[str, float | int | None]:
+    """Per-case averages for latency, tokens, calls and cost."""
+    from recfair.observability.tokens import estimate_llm_cost_usd
+
+    if not records:
+        return {
+            "latencia_media_s": None,
+            "tokens_entrada": None,
+            "tokens_saida": None,
+            "tokens_total": None,
+            "chamadas_llm": None,
+            "tool_calls": None,
+            "custo_usd": None,
+        }
+
+    latencies: list[float] = []
+    tokens_in: list[float] = []
+    tokens_out: list[float] = []
+    llm_calls: list[float] = []
+    tool_calls: list[float] = []
+    costs: list[float] = []
+    for record in records:
+        metrics = record.get("metrics") or {}
+        latencies.append(float(metrics.get("latencia_s") or 0))
+        tok_in = float(metrics.get("tokens_entrada") or 0)
+        tok_out = float(metrics.get("tokens_saida") or 0)
+        tokens_in.append(tok_in)
+        tokens_out.append(tok_out)
+        llm_calls.append(float(metrics.get("chamadas_llm") or 0))
+        tool_calls.append(float(metrics.get("tool_calls") or 0))
+        costs.append(estimate_llm_cost_usd(tok_in, tok_out))
+
+    n = len(records)
+    mean_in = sum(tokens_in) / n
+    mean_out = sum(tokens_out) / n
+    return {
+        "latencia_media_s": round(sum(latencies) / n, 2),
+        "tokens_entrada": round(mean_in),
+        "tokens_saida": round(mean_out),
+        "tokens_total": round(mean_in + mean_out),
+        "chamadas_llm": round(sum(llm_calls) / n, 2),
+        "tool_calls": round(sum(tool_calls) / n, 2),
+        "custo_usd": round(sum(costs) / n, 6),
+    }
+
+
 def build_arch_instrumentation_table(
     manifests: dict[str, dict[str, Any]],
     context: EvalContext = "recomendacao",
 ) -> pd.DataFrame:
-    """Compare run instrumentation (cost, latency, tokens, calls) across architectures."""
+    """Compare per-case instrumentation averages across architectures."""
     rows: list[dict[str, str]] = []
     for arch in ("baseline", "workflow", "multiagent"):
         manifest = manifests.get(arch)
@@ -118,21 +167,24 @@ def build_arch_instrumentation_table(
         records = filter_records_by_context(manifest.get("records") or [], context)
         if not records:
             continue
-        resumo = summarize_records(records)
-        tokens_in = int(resumo.get("tokens_entrada") or 0)
-        tokens_out = int(resumo.get("tokens_saida") or 0)
+        stats = _mean_case_instrumentation(records)
         rows.append(
             {
                 "versão": ARCHITECTURE_LABELS.get(arch, arch),
                 "casos": str(len(records)),
-                "latência média (s)": str(resumo.get("latencia_media_s") or "—"),
-                "latência mediana (s)": str(resumo.get("latencia_mediana_s") or "—"),
-                "tokens entrada": f"{tokens_in:,}",
-                "tokens saída": f"{tokens_out:,}",
-                "tokens total": f"{tokens_in + tokens_out:,}",
-                "chamadas ao modelo": str(resumo.get("chamadas_llm") or 0),
-                "chamadas de ferramentas": str(resumo.get("tool_calls") or 0),
-                "custo estimado (USD)": f"${float(resumo.get('custo_estimado_usd') or 0):.4f}",
+                "latência média (s)": str(stats.get("latencia_media_s") or "—"),
+                "tokens entrada": f"{int(stats['tokens_entrada']):,}"
+                if stats.get("tokens_entrada") is not None
+                else "—",
+                "tokens saída": f"{int(stats['tokens_saida']):,}"
+                if stats.get("tokens_saida") is not None
+                else "—",
+                "tokens total": f"{int(stats['tokens_total']):,}"
+                if stats.get("tokens_total") is not None
+                else "—",
+                "chamadas ao modelo": str(stats.get("chamadas_llm") or "—"),
+                "chamadas de ferramentas": str(stats.get("tool_calls") or "—"),
+                "custo estimado (USD)": f"${float(stats.get('custo_usd') or 0):.4f}",
             }
         )
     if not rows:
@@ -149,7 +201,7 @@ def render_arch_instrumentation_panel(
     """HTML panel comparing operational metadata across architectures."""
     section = CONTEXT_SECTIONS.get(context, {})
     subtitle = (
-        f"{section.get('comparacao', '')} · soma nos casos de "
+        f"{section.get('comparacao', '')} · média por caso em "
         f"{CONTEXT_LABELS.get(context, context).lower()}"
     )
     df = build_arch_instrumentation_table(manifests, context)
@@ -223,7 +275,10 @@ def build_context_case_table(
         case = record["case"]
         check = record["check"]
         restrict = is_restrict_scope(case["familia"])
-        status = final_status(check["aprovado"], restrict)
+        if context == "recomendacao":
+            status = recommendation_final_status(check, restrict)
+        else:
+            status = final_status(check["aprovado"], restrict)
         row: dict[str, Any] = {
             "caso": case["id"],
             "status_final": status,

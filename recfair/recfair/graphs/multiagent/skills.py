@@ -7,10 +7,11 @@ from typing import Any
 SKILLS: dict[str, dict[str, Any]] = {
     "skill_recommend": {
         "index": "Top-5 por categoria, filtros e claims",
-        "tools": ["parse_intent", "match_claims_semantic", "score_recommendation"],
+        "tools": ["parse_intent", "score_recommendation"],
         "instruction": (
             "Ranquear o catálogo RecFair. Não responder FAQ nem políticas. "
-            "Não transbordar. Usar intent parseado + claims semânticos + engine."
+            "Não transbordar. Usar intent parseado E2 + engine (substring; "
+            "fallback semântico só quando substring não acerta em nenhum SKU)."
         ),
     },
     "skill_faq": {

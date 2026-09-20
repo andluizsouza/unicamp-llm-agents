@@ -1,4 +1,4 @@
-"""Semantic claim matching (multiagent only; E2 gold keeps substring)."""
+"""Claim matching: substring (E2 default) with optional per-SKU semantic fallback."""
 
 from __future__ import annotations
 
@@ -10,7 +10,6 @@ CLAIMS_INDEX_STEM = "claims"
 CLAIMS_MIN_SCORE = 0.38
 
 _STORE: VectorStore | None = None
-_TERM_CACHE: dict[tuple[str, ...], dict[str, str]] = {}
 
 
 def _claim_chunks() -> list[dict[str, str]]:
@@ -50,39 +49,44 @@ def _load_store() -> VectorStore:
     return _STORE
 
 
-def _sku_hits_for_terms(terms: list[str]) -> dict[str, str]:
-    """Map SKU → highest-scoring claim term above the similarity floor."""
-    key = tuple(t.lower() for t in terms)
-    cached = _TERM_CACHE.get(key)
-    if cached is not None:
-        return cached
+def _substring_match(sku: str, terms: list[str]) -> str | None:
+    from recfair.tools.scoring.engine import _claim_match
+
+    return _claim_match(sku, terms)
+
+
+def _semantic_match_sku(sku: str, terms: list[str]) -> str | None:
+    """Return the first term that semantically matches a claim chunk for ``sku``."""
+    if not terms:
+        return None
     embedder = get_embedder()
     store = _load_store()
-    mapping: dict[str, str] = {}
-    best_score: dict[str, float] = {}
+    k = min(32, max(8, len(store.metadata)))
     for term in terms:
-        hits = store.search(
-            embedder.encode([term])[0],
-            k=min(24, max(8, len(store.metadata))),
-        )
-        for hit in hits:
-            score = float(hit.get("score") or 0)
-            if score < CLAIMS_MIN_SCORE:
+        vector = embedder.encode([term])[0]
+        for hit in store.search(vector, k=k):
+            if hit.get("sku") != sku:
                 continue
-            sku = hit["sku"]
-            if sku not in best_score or score > best_score[sku]:
-                best_score[sku] = score
-                mapping[sku] = term
-    _TERM_CACHE[key] = mapping
-    return mapping
+            if float(hit.get("score") or 0) >= CLAIMS_MIN_SCORE:
+                return term
+    return None
+
+
+def pool_has_substring_match(pool: list[str], terms: list[str]) -> bool:
+    """True when any SKU in ``pool`` matches ``terms`` via substring."""
+    if not terms:
+        return False
+    return any(_substring_match(sku, terms) is not None for sku in pool)
+
+
+def match_substring_or_semantic(sku: str, terms: list[str]) -> str | None:
+    """Substring for ``sku``, then semantic fallback when substring misses."""
+    hit = _substring_match(sku, terms)
+    if hit:
+        return hit
+    return _semantic_match_sku(sku, terms)
 
 
 def match_claims_semantic(sku: str, terms: list[str]) -> str | None:
-    """Return a matched claim term for ``sku``, or ``None``.
-
-    Signature matches ``engine._claim_match`` so the scoring pipeline can
-    inject this matcher without changing step order.
-    """
-    if not terms:
-        return None
-    return _sku_hits_for_terms(terms).get(sku)
+    """Semantic-only matcher (tests and legacy callers)."""
+    return _semantic_match_sku(sku, terms)

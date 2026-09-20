@@ -334,6 +334,7 @@ def test_context_case_table_uses_status_final() -> None:
             "case": case,
             "check": {
                 "aprovado": True,
+                "aprovado_exact": True,
                 "skus": [],
                 "gold": [],
                 "status": "recommendation",
@@ -343,6 +344,62 @@ def test_context_case_table_uses_status_final() -> None:
     table = build_context_case_table(records, "recomendacao")
     assert "status_final" in table.columns
     assert table.iloc[0]["status_final"] == "sucesso"
+
+
+def test_recommendation_status_uses_aprovado_exact() -> None:
+    from eval.fingerprint import load_cases
+    from eval.gold import gold_for
+    from eval.report import build_context_case_table
+    from eval.verify import verify_case
+    from recfair.data.catalog import catalog_by_sku
+    from recfair.schemas.output import RecFairOutput, RecommendationItem
+
+    cat = catalog_by_sku()
+    for case_id in ("T14", "T38"):
+        case = next(item for item in load_cases() if item["id"] == case_id)
+        gold = gold_for(case)
+        items = [
+            RecommendationItem(
+                sku=sku,
+                name=sku,
+                brand=cat[sku]["brand"],
+                category=cat[sku]["category"],
+                units_7d=1,
+            )
+            for sku in gold
+        ]
+        check = verify_case(
+            case,
+            RecFairOutput(status="recommendation", items=items, halt_reason="completed"),
+        )
+        assert check["aprovado_exact"] is True
+        assert check["aprovado"] is False
+        table = build_context_case_table(
+            [{"case": case, "check": check}],
+            "recomendacao",
+        )
+        assert table.iloc[0]["status_final"] == "sucesso"
+
+
+def test_recommendation_status_marks_non_exact_as_error() -> None:
+    from eval.fingerprint import load_cases
+    from eval.report import build_context_case_table
+
+    case = next(item for item in load_cases() if item["id"] == "T36")
+    records = [
+        {
+            "case": case,
+            "check": {
+                "aprovado": True,
+                "aprovado_exact": False,
+                "skus": ["F3P9W2"],
+                "gold": ["H8Q3N1"],
+                "status": "recommendation",
+            },
+        }
+    ]
+    table = build_context_case_table(records, "recomendacao")
+    assert table.iloc[0]["status_final"] == "erro"
 
 
 def test_rf_breakdown_includes_concepts() -> None:

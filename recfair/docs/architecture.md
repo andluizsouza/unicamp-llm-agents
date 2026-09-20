@@ -15,7 +15,7 @@ RecFair é um assistente de recomendação Top-5 para catálogo de beleza (Grupo
 | :--- | :--- | :--- | :--- |
 | **Padrão** | Monolito — 1× LLM | LangGraph — LLM só em `parse_intent` | Supervisor — 3 agentes + 2 nós |
 | **Dados no prompt** | Catálogo + vendas (~29k tokens) | Query NL | Query sanitizada + skills index / FAQ chunks |
-| **Ranking** | Modelo no prompt | `engine.py` (substring claims) | Mesmo engine + `match_claims_semantic` |
+| **Ranking** | Modelo no prompt | `engine.py` (substring claims) | Mesmo engine E2; `semantic_fallback` só se substring falha no pool |
 | **Guardrail** | Não | Não | `security_node` regex/redact |
 | **FAQ / handoff** | Não | Não | Agente FAQ + nó template `0800-000-0000` |
 | **Memória** | Stateless | `MemorySaver` | `MemorySaver` (mesmo recorte) |
@@ -92,7 +92,7 @@ Não passam no teste de 4 colunas (escopo / tools / instrução / avaliação is
 
 ### Pipeline de recomendação (interno ao especialista)
 
-Reusa `parse_intent` E2 + `score_recommendation(..., claim_matcher=match_claims_semantic)` + synthesize. O default do engine (substring) permanece para `workflow` e `eval/gold.py`.
+Reusa `parse_intent` E2 + `score_recommendation(..., semantic_fallback=True)` + synthesize. Substring é a régua (igual E2/gold); fallback semântico por SKU só quando nenhum item do pool acerta substring. Oráculos de paráfrase ficam em `tests/test_claims_semantic.py`, fora do H.1.
 
 ### Memória
 

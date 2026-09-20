@@ -1,4 +1,4 @@
-"""Recommendation specialist — E2 pipeline plus semantic claims."""
+"""Recommendation specialist — thin E2 wrapper (parse_intent + scoring + synthesize)."""
 
 from __future__ import annotations
 
@@ -14,7 +14,6 @@ from recfair.graphs.workflow.nodes.scoring import abstain_node, synthesize_node
 from recfair.observability.agent_trace import AgentTrace, append_trace
 from recfair.schemas.output import RecFairOutput
 from recfair.schemas.routing import AgentMetrics, AgentResult
-from recfair.tools.claims_semantic import match_claims_semantic
 from recfair.tools.scoring.engine import score_recommendation
 
 _LOG = logging.getLogger(__name__)
@@ -75,7 +74,7 @@ def _error_update(
 
 
 def recommendation_node(state: MultiAgentState) -> dict[str, Any]:
-    """Parse intent, score with semantic claims, synthesize RecFairOutput."""
+    """Parse intent (E2), score with substring ruler, synthesize RecFairOutput."""
     start = time.perf_counter()
     skill = load_skill("skill_recommend")
     query = state.get("query_sanitized") or state["query"]
@@ -103,7 +102,7 @@ def recommendation_node(state: MultiAgentState) -> dict[str, Any]:
         if parsed.abstain:
             out_update = abstain_node(merged)
         else:
-            result = score_recommendation(parsed, claim_matcher=match_claims_semantic)
+            result = score_recommendation(parsed, semantic_fallback=True)
             extra_tools = result.tool_calls + 1
             scoring_trace = result.trace.to_dicts()
             ranked = result.skus

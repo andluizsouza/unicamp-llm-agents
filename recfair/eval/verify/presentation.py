@@ -72,6 +72,18 @@ def final_status(aprovado: bool, restrict: bool) -> str:
     return "erro" if restrict else "erro*"
 
 
+def recommendation_final_status(check: dict[str, Any], restrict: bool) -> str:
+    """Status for H.1 recommendation panels (ADR 0004).
+
+    Uses ``aprovado_exact`` so a case that matches the engine gold is marked
+    as success even when legacy ``aprovado`` applies extra RF checks (e.g.
+    T14 forbidden SKU present in gold, T38 single-brand diversity).
+    """
+    if check.get("aprovado_exact"):
+        return "sucesso"
+    return "erro" if restrict else "erro*"
+
+
 _E2_SECURITY_FAMILIAS = frozenset({"G_pii", "G_injection", "G_jailbreak"})
 
 

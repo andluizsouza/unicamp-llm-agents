@@ -97,8 +97,7 @@ METRIC_GLOSSARY: list[dict[str, str]] = [
         "contexto": "FAQ (H.3)",
         "o_que_mede": (
             "Média da similaridade por cosseno entre o embedding da resposta gerada e "
-            "o embedding da resposta de referência (modelo MiniLM multilíngue). "
-            "Inspirado no hands_on_final_test do curso."
+            "o embedding da resposta de referência (modelo MiniLM multilíngue)."
         ),
         "como_interpretar": (
             "Escala de 0 a 1. Acima de 0,65 consideramos semanticamente adequado. "

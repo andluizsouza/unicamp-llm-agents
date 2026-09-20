@@ -9,6 +9,7 @@ from eval.verify.presentation import (
     format_gabarito_col,
     gold_diff_label,
     is_restrict_scope,
+    recommendation_final_status,
 )
 
 __all__ = [
@@ -20,5 +21,6 @@ __all__ = [
     "gold_diff_label",
     "is_restrict_scope",
     "motivo_sucesso",
+    "recommendation_final_status",
     "verify_case",
 ]
