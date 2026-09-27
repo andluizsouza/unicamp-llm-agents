@@ -237,6 +237,26 @@ def _output_text(output: RecFairOutput) -> str:
     return " ".join(parts)
 
 
+def summarize_pair_output(output: RecFairOutput, check: dict[str, Any]) -> dict[str, Any]:
+    """Compact model output for min-pair side-by-side display.
+
+    Keeps the last run's visible answer (SKUs or text) plus verify validity.
+    """
+    text = (output.answer_text or "").strip()
+    if len(text) > 600:
+        text = text[:600] + "…"
+    return {
+        "status": output.status,
+        "halt_reason": output.halt_reason,
+        "degraded": bool(output.degraded),
+        "skus": [item.sku for item in output.items],
+        "nomes": [item.name for item in output.items],
+        "answer_text": text,
+        "aprovado": bool(check.get("aprovado")),
+        "gold": list(check.get("gold") or []),
+    }
+
+
 def measure_dimensions(
     output: RecFairOutput,
     check: dict[str, Any],
@@ -305,10 +325,12 @@ def run_min_pairs(
         variant_rows: list[dict[str, Any]] = []
         for variant in pair.get("variants") or []:
             dims_runs: list[dict[str, Any]] = []
+            last_view: dict[str, Any] | None = None
             for _ in range(max(1, n_reps)):
                 output, _metrics = runner(variant["entrada"])
                 check = verify_case(gold_case, output)
                 dims_runs.append(measure_dimensions(output, check))
+                last_view = summarize_pair_output(output, check)
             variant_rows.append(
                 {
                     "id": variant.get("id"),
@@ -317,6 +339,7 @@ def run_min_pairs(
                     "entrada": variant.get("entrada"),
                     "runs": dims_runs,
                     "media": _mean_dims(dims_runs),
+                    "saida": last_view,
                 }
             )
         results.append(

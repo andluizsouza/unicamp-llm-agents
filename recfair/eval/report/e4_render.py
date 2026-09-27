@@ -16,7 +16,6 @@ from eval.contexts import (
     EvalContext,
     filter_records_by_context,
 )
-from eval.ethics import pair_verdicts
 from eval.glossary import ARCHITECTURE_LABELS, CONTEXT_SECTIONS
 from eval.report.e3_panels import build_context_summary_table, render_arch_instrumentation_panel
 from eval.report.e4_panels import case_changes_table, consequence_matrix_table
@@ -537,106 +536,6 @@ def render_weighted_ranking_panel(df: pd.DataFrame) -> str:
         subtitle="Compare `rank_simples` vs `rank_ponderado` — divergência indica erros graves desbalanceados",
         show_legend=False,
     )
-
-
-def _fmt_dim(value: Any) -> str:
-    if value is None:
-        return "—"
-    if isinstance(value, float):
-        return f"{value:.3f}"
-    return str(value)
-
-
-def render_min_pairs_panel(
-    pair_runs: list[dict[str, Any]],
-    *,
-    pairs_meta: list[dict[str, Any]] | None = None,
-) -> str:
-    """Side-by-side min-pair comparison (P01–P05)."""
-    parts: list[str] = []
-    meta_by_id = {p["pair_id"]: p for p in (pairs_meta or [])}
-    if not pair_runs and pairs_meta:
-        catalog_rows = []
-        for pair in pairs_meta:
-            variants = " · ".join(
-                f"{v.get('label')}: «{(v.get('entrada') or '')[:50]}…»"
-                for v in (pair.get("variants") or [])[:2]
-            )
-            catalog_rows.append(
-                {
-                    "par": pair["pair_id"],
-                    "eixo": pair.get("axis"),
-                    "camada": pair.get("layer"),
-                    "exemplo": variants,
-                    "nota": (pair.get("note") or "")[:100],
-                }
-            )
-        parts.append(
-            render_comparison_report(
-                pd.DataFrame(catalog_rows),
-                status_col="par",
-                title="Catálogo de pares mínimos (exemplos de entrada)",
-                subtitle="Execute `RUN_E4` com `persist=True` e grave snapshot em "
-                "`eval/fixtures/e4_min_pairs_resilient.json` para métricas lado a lado",
-                code_columns=frozenset({"exemplo"}),
-                show_legend=False,
-            )
-        )
-        return "".join(parts)
-
-    for pair in pair_runs:
-        pair_id = pair.get("pair_id")
-        meta = meta_by_id.get(pair_id) or {}
-        subtitle = meta.get("note") or pair.get("note") or ""
-        rows: list[dict[str, Any]] = []
-        for variant in pair.get("variants") or []:
-            media = variant.get("media") or {}
-            rows.append(
-                {
-                    "variante": variant.get("label"),
-                    "reformulação": variant.get("reformulation"),
-                    "entrada": (variant.get("entrada") or "")[:90],
-                    "acerto": _fmt_dim(media.get("acerto")),
-                    "confiança": _fmt_dim(media.get("confianca")),
-                    "evidência": _fmt_dim(media.get("evidencia")),
-                    "ressalvas": _fmt_dim(media.get("ressalvas")),
-                    "nDCG@5": _fmt_dim(media.get("ndcg_at_5")),
-                }
-            )
-        parts.append(
-            render_comparison_report(
-                pd.DataFrame(rows),
-                status_col="variante",
-                title=f"Par {pair_id} — eixo {pair.get('axis')} ({pair.get('layer')})",
-                subtitle=subtitle,
-                code_columns=frozenset({"entrada"}),
-                show_legend=False,
-            )
-        )
-        for verdict in pair_verdicts(pair):
-            if not verdict.get("relevante"):
-                continue
-            parts.append(
-                f'<p style="font-size:12px;color:#b45309;margin:4px 0 12px 18px;">'
-                f"⚠ Diferença relevante (reformulação {verdict.get('reformulation')}): "
-                f"{verdict.get('left')} vs {verdict.get('right')} · deltas {verdict.get('deltas')}"
-                f"</p>"
-            )
-    title = "Pares mínimos P01–P05 (resilient)"
-    if not parts:
-        return render_comparison_report(
-            pd.DataFrame([{"par": "—", "status": "sem snapshot"}]),
-            status_col="par",
-            title=title,
-            subtitle="Nenhum dado em `eval/fixtures/e4_min_pairs_resilient.json`",
-            show_legend=False,
-        )
-    header = (
-        f'<div style="font-size:13px;color:#374151;margin:8px 0 14px;">'
-        f"{title} — comparação lado a lado · diferença só conta acima da faixa de ruído (§D)"
-        f"</div>"
-    )
-    return header + "".join(parts)
 
 
 def render_traceability_panel() -> str:

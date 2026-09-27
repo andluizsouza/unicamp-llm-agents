@@ -31,7 +31,6 @@ from eval.report.e4_render import (
     render_consolidation_panel,
     render_containment_panel,
     render_e4_context_section,
-    render_min_pairs_panel,
     render_overlap_panel,
     render_reliability_chart,
     render_reliability_rates_panel,
@@ -50,6 +49,7 @@ from eval.report.legacy import (
     render_metrics_panel,
     summarize_records,
 )
+from eval.report.min_pairs_panel import render_min_pairs_panel
 from eval.report.scopes import (
     e3_scope_of,
     render_rf_breakdown_table,
