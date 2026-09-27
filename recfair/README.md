@@ -139,8 +139,8 @@ Ambiente virtual: `venv-recfair/` (criado localmente, não versionado). Interpre
 | :--- | :--- | :--- | :--- |
 | `baseline` | E1 | 1× LLM, stuffing CSV, sem tools | [0001](docs/adr/0001-baseline.md) |
 | `workflow` | E2 | LangGraph, intent LLM + scoring 7 passos, memória | [0002](docs/adr/0002-workflow-scoring.md) |
-| `resilient` | E4 | Grafo E3 + harness (retry/timeout/degrade/verify) + prompt v4 | [0004](docs/adr/0004-resilient-harness.md) |
 | `multiagent` | E3 | Supervisor + FAQ RAG + guardrail + claims embed + roteamento | [0003](docs/adr/0003-multiagent-supervisor.md) |
+| `resilient` | E4 | Grafo E3 + harness (retry/timeout/degrade/verify) + prompt v4 | [0004](docs/adr/0004-resilient-harness.md) |
 
 Mapa completo com diagramas: [`docs/architecture.md`](docs/architecture.md).
 
@@ -163,11 +163,6 @@ Não há `make eval` — golden-set roda nos notebooks via `eval.runner.run_eval
 
 ---
 
-## Evolução prevista (pós-E4)
+## O que não está no sistema
 
-Documentado em [`docs/architecture.md`](docs/architecture.md) e ADR 0004:
-
-- Correção de intent/memória (T09, T31) se o Painel A exigir.
-- Claims semânticos (T21/T22) se o eval mostrar gap persistente além do ruído de Wilson.
-- MCP só com reuso ou fronteira de permissão medida.
-- Fairness auditor só com limitação medida que os pares mínimos não fechem.
+Lista e motivo em [`docs/architecture.md`](docs/architecture.md) (seção “Deliberadamente fora do E4”) e no [ADR 0004](docs/adr/0004-resilient-harness.md): fairness auditor, MCP, memória de longo prazo, mutação da régua T01–T60.

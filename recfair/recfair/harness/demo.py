@@ -8,7 +8,7 @@ from typing import Any
 from recfair.harness.context import HarnessSettings, harness_scope
 from recfair.harness.degrade import tool_error_output
 from recfair.harness.retry import TransientError, call_with_retry
-from recfair.harness.unstable import FonteIndisponivel
+from recfair.harness.unstable import maybe_fail
 from recfair.harness.verify_output import (
     apply_silent_failure_checks,
     verify_confidence,
@@ -46,8 +46,7 @@ def demo_containment(
 
             def _unstable() -> str:
                 attempts["n"] += 1
-                if rng.random() < failure_prob:
-                    raise FonteIndisponivel(f"fonte FAQ instável (injeção p={failure_prob})")
+                maybe_fail(rng=rng)
                 return "ok"
 
             try:

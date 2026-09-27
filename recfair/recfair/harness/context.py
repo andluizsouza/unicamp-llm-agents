@@ -6,7 +6,7 @@ import os
 from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 
 
 def _env_float(name: str, default: float) -> float:
@@ -104,7 +104,7 @@ def harness_scope(settings: HarnessSettings | None = None) -> Iterator[HarnessSe
             with ``enabled=True``.
 
     Yields:
-        The settings token that is now active.
+        The harness settings active for this block.
     """
     active = settings if settings is not None else settings_from_env(enabled=True)
     token: Token[HarnessSettings] = _SETTINGS.set(active)
@@ -112,8 +112,3 @@ def harness_scope(settings: HarnessSettings | None = None) -> Iterator[HarnessSe
         yield active
     finally:
         _SETTINGS.reset(token)
-
-
-def overlay_settings(**changes: object) -> HarnessSettings:
-    """Return a copy of the current settings with selected fields replaced."""
-    return replace(current_settings(), **changes)  # type: ignore[arg-type]

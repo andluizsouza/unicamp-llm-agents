@@ -17,7 +17,7 @@ RecFair é um assistente de recomendação Top-5 para catálogo de beleza (Grupo
 | **Ranking** | Modelo no prompt | `engine.py` (substring claims) | Engine E2 + `semantic_fallback` | Idem E3 |
 | **Guardrail** | Não | Não | `security_node` regex/redact | Idem + verify pós-grafo |
 | **FAQ / handoff / out_of_context** | Não | Não | Agente FAQ + nós template | Idem; FAQ instável → degradado |
-| **Contenção** | Schema inválido → abstenção | `recursion_limit=12` | `recursion_limit=16` | Retry, timeout, degrade, 2 checks |
+| **Contenção** | Schema inválido → abstenção | `recursion_limit=12` | `recursion_limit=16` | Retry + timeout nos adapters; verify pós-`invoke` |
 | **Memória** | Stateless | `MemorySaver` | `MemorySaver` | Mesmo checkpointer E3 |
 | **Prompt** | `baseline_v1` | `workflow_v2` | `multiagent_v3` | `multiagent_v4` |
 | **ADR** | [0001](adr/0001-baseline.md) | [0002](adr/0002-workflow-scoring.md) | [0003](adr/0003-multiagent-supervisor.md) | [0004](adr/0004-resilient-harness.md) |
@@ -58,13 +58,42 @@ eval/
 
 ## Arquitetura `resilient` (E4, vigente)
 
-**Objetivo:** conter falhas transitórias, tornar falhas silenciosas detectáveis e medir dano/viés sem um quarto agente.
+**Decisão:** ADR [0004](adr/0004-resilient-harness.md). Não há grafo novo. `graphs/resilient/runner.py` compila o LangGraph E3 e liga o pacote `recfair/harness/` só naquela chamada.
 
-**Ganho esperado:** demos de contenção (p=0,4) e verificadores determinísticos; Painel A (T01–T60) empate dentro do intervalo de Wilson é resultado válido.
+**Componentes:**
 
-### Grafo
+| Peça | Onde | Papel |
+| :--- | :--- | :--- |
+| Escopo | `harness/context.py` | `ContextVar`; default desligado, então `ARCH=multiagent` não retenta |
+| Adapters | `harness/adapters.py` | Timeout + retry no LLM estruturado e no retrieve FAQ |
+| Retry | `harness/retry.py` | Só falha transitória; backoff exponencial |
+| Timeout | `harness/timeout.py` | Thread daemon; estouro → `TimeoutExpired` |
+| Injeção | `harness/unstable.py` | `FonteIndisponivel` com `RECFAIR_INJECT_FAILURE_PROB` (default 0) |
+| Degradação | `harness/degrade.py` | Prefixo `[Resposta parcial]`, `degraded=True` |
+| Citações | `harness/citations.py` | Claims do SKU ou excerpts da FAQ |
+| Verify | `harness/verify_output.py` | `verify_evidence` + `verify_confidence` após o `invoke` |
+| Prompt | `prompts/multiagent_v4.py` | Equidade; `dispatch.py` só escolhe v4 com o harness ligado |
 
-Reusa o LangGraph E3. O runner liga `harness_scope`, preenche `citations` e aplica `apply_silent_failure_checks`. FAQ/tool com falha após retries vira handoff com `degraded=True` e prefixo `[Resposta parcial]`.
+**Ganho esperado:** contenção demonstrável sem LLM; falha silenciosa vira handoff rotulado. Empate de nDCG@5 no Painel A, dentro do intervalo de Wilson, é resultado válido. Ponte: [`eval/notebooks/E4_robustez_etica.ipynb`](../eval/notebooks/E4_robustez_etica.ipynb) e `tests/test_harness.py`. Runs `resilient` full ainda não estão em `eval/runs/`.
+
+### Fluxo do runner
+
+O verify **não** é nó do LangGraph. Roda em `_post_process` quando o `invoke` devolve state.
+
+```mermaid
+flowchart TD
+    scope[harness_scope] --> invoke[grafo E3]
+    invoke -->|exceção no supervisor| esc[timeout_output ou tool_error_output]
+    invoke -->|FAQ capturou a falha| post[_post_process]
+    invoke -->|ok| post
+    post --> checks[citações + dois verificadores]
+    checks -->|issue| deg["handoff halt=degraded"]
+    post -->|FAQ replanejada| lab["label_degraded halt=degraded"]
+```
+
+Injeção de FAQ (`FonteIndisponivel`) não chega ao `except` do runner: `faq_node` transforma em handoff e o pós-processo só acrescenta o rótulo `[Resposta parcial]`. `timeout_output` / `tool_error_output` cobrem exceção que escapa do grafo (supervisor).
+
+### Grafo (o mesmo do E3)
 
 ```mermaid
 flowchart TD
@@ -75,14 +104,19 @@ flowchart TD
     ROUTE -->|faq| FAQ[faq]
     ROUTE -->|out_of_context| OOC[out_of_context]
     ROUTE -->|handoff| HO[handoff]
-    FAQ --> VER[harness_verify]
-    REC --> VER
-    VER -->|ok| END([RecFairOutput])
-    VER -->|silencioso| DEG[handoff_degradado]
-    DEG --> END
+    FAQ -->|no_evidence ou error| HO
+    REC -->|error| HO
+    REC --> ENDN([END])
+    FAQ --> ENDN
+    OOC --> ENDN
+    HO --> ENDN
 ```
 
-**Controles:** `recursion_limit=16`; timeout LLM/FAQ; retry só em falha transitória; injeção `RECFAIR_INJECT_FAILURE_PROB` (default 0).
+**Controles:** `recursion_limit=16`; timeout LLM 45 s e FAQ 20 s; até 3 retries extras só em falha transitória; injeção de falha default 0. Checkpointer in-memory igual ao E3.
+
+### Prompt e tools
+
+Supervisor e FAQ leem `prompts/dispatch.py`. Harness ligado → `multiagent_v4` (não inferir gênero, idade, registro ou tipo de cabelo para piorar a rota). Harness desligado → `multiagent_v3`. Ranking, guardrail, RAG e scoring são os do E3; o harness só embrulha o `invoke` do LLM e o `retrieve_faq`.
 
 ---
 
@@ -175,6 +209,7 @@ Pipeline de 7 passos em `engine.py` (ADR 0002). `eval/gold.py` delega ao mesmo e
 - `status`: `recommendation` | `abstention` | `faq` | `handoff` | `out_of_context`
 - `items[]`: Top-5 ou vazio
 - `answer_text` / `handoff_phone` / `agents_route`: campos E3 opcionais (default vazio)
+- `degraded` / `degraded_reason` / `citations`: campos E4 (default off). `halt_reason` aceita também `timeout`, `degraded`, `tool_error`
 - T01–T38 continuam usando só `recommendation`/`abstention`
 
 Contrato entre agentes: `RoutingDecision` e `AgentResult` em `schemas/routing.py`. O grafo persiste `last_result` em cada especialista; FAQ `no_evidence`/`error` e recomendação `error` roteiam para `handoff_node`. Perguntas totalmente fora de O Boticário vão para `out_of_context_node` (template fixo, sem telefone).
@@ -211,6 +246,19 @@ Painel A (T01–T38) permanece congelado para comparação com E2. Painéis H.1�
 `e1_rate_*` / `e2_rate_*` permanecem no manifest. Métricas **não** vivem no notebook.
 
 Golden-set: T01–T38 imutáveis; T39–T60 acrescentados em fases (ver ADR 0003 §4.4). Hash `golden_revision` em cada run.
+
+### Avaliação E4 (ADR 0004 §4.7)
+
+A régua T01–T60 e `verify_case` não mudam. O que entra é leitura extra, fora da taxa agregada quando o eixo não é a régua:
+
+| Módulo | O que mede |
+| :--- | :--- |
+| `eval/stats.py` | Intervalo de Wilson e se dois intervalos se sobrepõem |
+| `eval/reliability.py` | Três rodadas da mesma arch; casos que mudam de aprovado |
+| `eval/ethics.py` | Peso de dano 0–5, score ponderado, pares P01–P05 |
+| `data/golden/min_pairs.json` | Paridade (cabelo, gênero, idade, registro); ouro compartilhado |
+
+Manifests canônicos E1–E3 na régua de 60 casos: `c6d86c0d894f`, `6d5cb78a9e25`, `ae3f3348d3e4` (`golden_revision=3cbcb3e4c4b9cec7`).
 
 ---
 
@@ -272,7 +320,7 @@ Golden-set: [`eval/notebooks/E4_robustez_etica.ipynb`](../eval/notebooks/E4_robu
 | Fairness auditor (agente) | E4 mede dano no eval; ADR 0003 já recusou |
 | MCP | Sem reuso nem fronteira |
 | Memória de longo prazo | Checkpointer in-memory; accountability via `eval/runs/` |
-| WIP E3B (`multiagent_v2`) | Performance de retrieval, fora do enunciado E4 |
+| `multiagent_v2` | Experimento de retrieval; não está no registry |
 | Mutar `verify_case` na régua T01–T60 | Skill: comparação principal herdada |
 
 ---

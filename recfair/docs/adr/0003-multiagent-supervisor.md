@@ -2,7 +2,7 @@
 
 - Status: aceito
 - Data: 2026-09-19
-- Arquitetura: `multiagent` (vigente) + pacote `eval/` (régua E3)
+- Arquitetura: `multiagent` (executável; default do CLI passou a `resilient` no ADR 0004) + pacote `eval/` (régua E3)
 - Autores: RecFair E3
 
 ---
@@ -239,7 +239,7 @@ Total roteamento (H.4): 12 casos (3 rec, 3 FAQ, 2 transbordo, 4 fora de contexto
 | Pacote `recfair/skills/` | Dict inline atende o enunciado |
 | Correção de intent/memória T09/T31 | Fora de escopo medido |
 | nDCG no runtime | Só no pacote `eval/` |
-| T61+ | Futuro (E4+) |
+| T61+ | Não entrou no E4; paridade ficou em `min_pairs.json` (ADR 0004) |
 
 ---
 
@@ -268,4 +268,4 @@ Detalhe completo de runs: `eval/runs/<run_id>.json` e notebook — não duplicar
 - **Experimento:** mesma sessão, `gemini-3.5-flash-lite`, `run_eval(arch="baseline")` + `run_eval(arch="workflow")` + `run_eval(arch="multiagent")` no notebook E3.
 - **Reavaliar até:** 2026-10-03 (Entregável 4).
 
-Se o eval empatar ou piorar no Painel A, a hipótese é roteamento indevido (FAQ vs rec). O incremento **permanece** `CURRENT_ARCH`. Sem peças extras até nova evidência.
+Se o eval empatar ou piorar no Painel A, a hipótese é roteamento indevido (FAQ vs rec). Na data deste ADR o incremento era `CURRENT_ARCH`. Desde 2026-09-27 o default do CLI é `resilient` (ADR 0004); `multiagent` continua executável. Sem peças extras até nova evidência.

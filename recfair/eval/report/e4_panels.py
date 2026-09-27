@@ -103,17 +103,6 @@ def wilson_overlap_table(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def case_changes_table(manifests: dict[str, dict[str, Any]]) -> pd.DataFrame:
-    """Per-case pass/fail across architectures (frozen ruler)."""
-    by_id: dict[str, dict[str, Any]] = {}
-    for arch, manifest in manifests.items():
-        for row in frozen_records(list(manifest.get("records") or [])):
-            case_id = str((row.get("case") or {}).get("id") or "")
-            by_id.setdefault(case_id, {"caso": case_id})
-            by_id[case_id][arch] = bool((row.get("check") or {}).get("aprovado"))
-    return pd.DataFrame(list(by_id.values())).sort_values("caso")
-
-
 def weighted_vs_simple_table(manifests: dict[str, dict[str, Any]]) -> pd.DataFrame:
     """Simple accuracy vs harm-weighted score; used to compare rankings."""
     rows: list[dict[str, Any]] = []
@@ -147,26 +136,3 @@ def type_breakdown_table(records: list[dict[str, Any]], field: str = "tipo") -> 
 def consequence_matrix_table() -> pd.DataFrame:
     """Static consequence matrix aligned with GRAVIDADE weights."""
     return pd.DataFrame(CONSEQUENCE_MATRIX)
-
-
-def unusual_profile_rows(records: list[dict[str, Any]]) -> pd.DataFrame:
-    """Cases beyond T01–T60 (empty while the golden-set stays at 60)."""
-    rows: list[dict[str, Any]] = []
-    for row in records:
-        case = row.get("case") or {}
-        if is_frozen_ruler_case(case):
-            continue
-        check = row.get("check") or {}
-        rows.append(
-            {
-                "caso": case.get("id"),
-                "tipo": case.get("tipo"),
-                "familia": case.get("familia"),
-                "entrada": case.get("entrada"),
-                "aprovado": check.get("aprovado"),
-                "severity": check.get("severity"),
-                "ndcg_at_5": check.get("ndcg_at_5"),
-                "target_hit": check.get("g_target_hit"),
-            }
-        )
-    return pd.DataFrame(rows)

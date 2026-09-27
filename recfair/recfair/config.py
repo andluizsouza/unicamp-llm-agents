@@ -15,8 +15,6 @@ ARCHITECTURE_DATES = {
     "resilient": "2026-09-27",
 }
 
-# Legacy global (E2). Each graph module exposes its own ``prompt_version()``.
-PROMPT_VERSION = "v2"
 TEMPERATURE = 0
 N_RECOMMEND = 5
 HANDOFF_PHONE = "0800-000-0000"

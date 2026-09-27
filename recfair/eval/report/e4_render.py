@@ -12,13 +12,12 @@ from eval.cases import is_frozen_ruler_case
 from eval.contexts import (
     CONTEXT_ARCHITECTURES,
     CONTEXT_LABELS,
-    EVAL_CONTEXTS,
     EvalContext,
     filter_records_by_context,
 )
 from eval.glossary import ARCHITECTURE_LABELS, CONTEXT_SECTIONS
 from eval.report.e3_panels import build_context_summary_table, render_arch_instrumentation_panel
-from eval.report.e4_panels import case_changes_table, consequence_matrix_table
+from eval.report.e4_panels import consequence_matrix_table
 from eval.report.html import _PANEL, _PANEL_HDR, render_comparison_report
 from eval.verify import (
     final_status,
@@ -36,41 +35,6 @@ E4_CANONICAL_RUN_IDS: dict[str, str] = {
 _MIN_PAIRS_FIXTURE = (
     Path(__file__).resolve().parent.parent / "fixtures" / "e4_min_pairs_resilient.json"
 )
-
-_ARCH_EVOLUTION_ROWS = [
-    {
-        "entrega": "E1 — Baseline",
-        "arch": "baseline",
-        "adr": "0001",
-        "desenho": "Stuffing CSV + 1× Gemini structured output",
-        "peça nova": "Contrato Pydantic `RecFairOutput`",
-        "limite medido": "Ranking no LLM; alto custo/token; sem tools nem guardrail dedicado",
-    },
-    {
-        "entrega": "E2 — Workflow",
-        "arch": "workflow",
-        "adr": "0002",
-        "desenho": "LangGraph ReAct + tools (engine 7 passos, claims, estoque)",
-        "peça nova": "Ranking determinístico auditável",
-        "limite medido": "Domínio único (sem FAQ/supervisor); claims por substring",
-    },
-    {
-        "entrega": "E3 — Multi-agentes",
-        "arch": "multiagent",
-        "adr": "0003",
-        "desenho": "Supervisor + especialistas + RAG FAQ + security determinístico",
-        "peça nova": "T39–T60; métricas por contexto (H.1–H.4)",
-        "limite medido": "Sem retry/degrade/verify pós-grafo; variância entre runs",
-    },
-    {
-        "entrega": "E4 — Resiliente",
-        "arch": "resilient",
-        "adr": "0004",
-        "desenho": "Grafo E3 + harness (retry, timeout, citations, verify v4)",
-        "peça nova": "`recfair/harness/`; pares mínimos P01–P05; Wilson + dano ponderado",
-        "limite medido": "Latência no pior caso; handoff degradado; HITL",
-    },
-]
 
 _TRACEABILITY_ROWS = [
     {
@@ -286,41 +250,6 @@ def render_e4_context_section(manifests: dict[str, dict[str, Any]], context: Eva
     return "".join(parts)
 
 
-def render_all_e4_context_sections(manifests: dict[str, dict[str, Any]]) -> str:
-    """H.1–H.4 sections comparing all architectures present in ``manifests``."""
-    return "".join(render_e4_context_section(manifests, context) for context in EVAL_CONTEXTS)
-
-
-def render_architecture_evolution_table() -> str:
-    """ADR-aligned architecture map E1–E4."""
-    df = pd.DataFrame(_ARCH_EVOLUTION_ROWS)
-    return render_comparison_report(
-        df,
-        status_col="entrega",
-        title="Evolução E1 → E4 (mapa de arquitetura)",
-        subtitle="Resumo dos ADRs 0001–0004 · mesmo modelo nas comparações reportadas",
-        code_columns=frozenset({"arch", "adr"}),
-        show_legend=False,
-    )
-
-
-def render_case_changes_panel(manifests: dict[str, dict[str, Any]]) -> str:
-    """Per-case pass/fail across architectures with status badges."""
-    df = case_changes_table(manifests).copy()
-    for col in df.columns:
-        if col == "caso":
-            continue
-        if df[col].dtype == bool:
-            df[col] = df[col].map({True: "sucesso", False: "erro"})
-    return render_comparison_report(
-        df,
-        status_col="caso",
-        title="Flips por caso (T01–T60)",
-        subtitle="Verde = aprovado na régua herdada · vermelho = reprovado",
-        show_legend=True,
-    )
-
-
 def render_consolidation_panel(df: pd.DataFrame) -> str:
     """Overall T01–T60 rates. Wilson intervals stay in section F."""
     present = [col for col in _OVERALL_COLUMNS if col in df.columns]
@@ -355,7 +284,7 @@ def render_containment_panel(stats: dict[str, Any]) -> str:
         df,
         status_col="métrica",
         title="Demo de contenção (sem LLM)",
-        subtitle="`recfair.harness.demo_containment` · `call_with_retry` + `tool_error_output`",
+        subtitle="`recfair.harness.demo.demo_containment` · `call_with_retry` + `tool_error_output`",
         show_legend=False,
     )
 

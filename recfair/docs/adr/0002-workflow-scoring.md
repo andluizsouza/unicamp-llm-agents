@@ -2,7 +2,7 @@
 
 - **Status:** aceito
 - **Data:** 2026-09-13
-- **Arquitetura:** `workflow` (`prompt_version=v2`) — executável via `ARCH=workflow` (não é mais `CURRENT_ARCH`; vigente E3 = `multiagent`, ADR 0003)
+- **Arquitetura:** `workflow` (`prompt_version=v2`) — executável via `ARCH=workflow` (não é `CURRENT_ARCH`; vigente = `resilient`, ADR 0004)
 - **Substitui:** n/a (coexiste com `baseline`)
 
 ## Contexto
