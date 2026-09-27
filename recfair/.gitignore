@@ -10,3 +10,4 @@ eval/runs/*.json
 *.db
 data/indexes/
 .DS_Store
+*.json
