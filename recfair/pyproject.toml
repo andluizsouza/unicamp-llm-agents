@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "recfair"
 version = "0.1.0"
-description = "RecFair — recommendation with fairness (E3 multiagent)"
+description = "RecFair — recommendation with fairness (E4 resilient harness)"
 readme = "README.md"
 requires-python = ">=3.14"
 

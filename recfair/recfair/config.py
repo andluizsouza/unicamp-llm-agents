@@ -7,11 +7,12 @@ import os
 import re
 from pathlib import Path
 
-CURRENT_ARCH = "multiagent"
+CURRENT_ARCH = "resilient"
 ARCHITECTURE_DATES = {
     "baseline": "2026-09-07",
     "workflow": "2026-09-13",
     "multiagent": "2026-09-19",
+    "resilient": "2026-09-27",
 }
 
 # Legacy global (E2). Each graph module exposes its own ``prompt_version()``.

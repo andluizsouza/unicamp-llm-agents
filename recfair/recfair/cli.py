@@ -14,6 +14,7 @@ from rich.prompt import Prompt
 
 from recfair.config import apply_dotenv, ensure_google_api_key, export_hf_token
 from recfair.graphs import multiagent as multiagent_mod
+from recfair.graphs import resilient as resilient_mod
 from recfair.graphs import workflow as workflow_mod
 from recfair.graphs.registry import get_runner, list_architectures
 
@@ -23,7 +24,14 @@ def _configure_logging(level: int = logging.WARNING) -> None:
     logging.basicConfig(level=level, format="%(levelname)s %(name)s: %(message)s")
     logging.getLogger("google_genai.models").setLevel(logging.ERROR)
 
-_THREADED = frozenset({workflow_mod.architecture_id(), multiagent_mod.architecture_id()})
+
+_THREADED = frozenset(
+    {
+        workflow_mod.architecture_id(),
+        multiagent_mod.architecture_id(),
+        resilient_mod.architecture_id(),
+    }
+)
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -31,7 +39,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--arch",
         default="current",
-        help="architecture id (baseline, workflow, multiagent, current, ...)",
+        help="architecture id (baseline, workflow, multiagent, resilient, current, ...)",
     )
     return parser.parse_args(argv)
 
@@ -39,7 +47,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def _reset_thread(arch_id: str, thread_id: str) -> None:
     if arch_id == workflow_mod.architecture_id():
         workflow_mod.reset_checkpoint(thread_id)
-    elif arch_id == multiagent_mod.architecture_id():
+    elif arch_id in {multiagent_mod.architecture_id(), resilient_mod.architecture_id()}:
         multiagent_mod.reset_checkpoint(thread_id)
 
 
@@ -112,9 +120,10 @@ def main(argv: list[str] | None = None) -> int:
             console.print(output.model_dump_json(indent=2))
         route = getattr(metrics, "agents_route", None) or output.agents_route
         route_bit = f" · rota={' > '.join(route)}" if route else ""
+        degraded_bit = " · degradado" if getattr(output, "degraded", False) else ""
         console.print(
             f"[dim]latência={metrics.latencia_s}s · llm={metrics.chamadas_llm} · "
-            f"tools={metrics.tool_calls} · halt={output.halt_reason}{route_bit}[/]"
+            f"tools={metrics.tool_calls} · halt={output.halt_reason}{route_bit}{degraded_bit}[/]"
         )
 
 

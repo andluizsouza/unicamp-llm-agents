@@ -10,6 +10,15 @@ from eval.report.e3_panels import (
     render_context_evaluation_section,
     render_metric_glossary,
 )
+from eval.report.e4_panels import (
+    case_changes_table,
+    consequence_matrix_table,
+    consolidate_versions,
+    type_breakdown_table,
+    unusual_profile_rows,
+    weighted_vs_simple_table,
+    wilson_overlap_table,
+)
 from eval.report.html import render_comparison_report
 from eval.report.legacy import (
     build_arch_comparison_table,
@@ -32,6 +41,9 @@ __all__ = [
     "build_context_case_table",
     "build_context_summary_table",
     "build_results_table",
+    "case_changes_table",
+    "consolidate_versions",
+    "consequence_matrix_table",
     "e3_scope_of",
     "render_agent_cost_table",
     "render_arch_comparison",
@@ -44,4 +56,8 @@ __all__ = [
     "summarize_by_context",
     "summarize_records",
     "summarize_records_v3",
+    "type_breakdown_table",
+    "unusual_profile_rows",
+    "weighted_vs_simple_table",
+    "wilson_overlap_table",
 ]

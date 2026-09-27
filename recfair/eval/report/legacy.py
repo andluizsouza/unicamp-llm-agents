@@ -49,6 +49,7 @@ def build_results_table(
         )
     return pd.DataFrame(rows)
 
+
 def render_metrics_panel(
     resumo: dict[str, Any],
     restrict_ok: int | None = None,
@@ -116,6 +117,7 @@ def render_metrics_panel(
         f"<b>${resumo['custo_estimado_usd']:.4f}</b></td></tr>"
         "</table></div>"
     )
+
 
 def _familia_bucket(familia: str) -> str:
     if familia == "S_memory":

@@ -9,7 +9,7 @@ from recfair.graphs.multiagent.llm import make_structured_llm, unpack_structured
 from recfair.graphs.multiagent.skills import skills_index
 from recfair.graphs.multiagent.state import MultiAgentState
 from recfair.observability.agent_trace import AgentTrace, append_trace
-from recfair.prompts.multiagent_v3 import build_supervisor_prompt
+from recfair.prompts.dispatch import build_supervisor_prompt
 from recfair.schemas.routing import RoutingDecision
 
 _STRUCTURED: Any = None

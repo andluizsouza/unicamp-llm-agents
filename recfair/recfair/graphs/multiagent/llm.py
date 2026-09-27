@@ -8,6 +8,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel
 
 from recfair.config import TEMPERATURE, model_version, sampling_fixed_by_model
+from recfair.harness.adapters import wrap_structured_llm
 from recfair.observability.tokens import usage_from_response
 
 
@@ -18,7 +19,8 @@ def make_structured_llm(schema: type[BaseModel]) -> Any:
     if not sampling_fixed_by_model(mv):
         kwargs["temperature"] = TEMPERATURE
     llm = ChatGoogleGenerativeAI(**kwargs)
-    return llm.with_structured_output(schema, include_raw=True, method="json_schema")
+    structured = llm.with_structured_output(schema, include_raw=True, method="json_schema")
+    return wrap_structured_llm(structured)
 
 
 def unpack_structured(packed: Any) -> tuple[Any, int | None, int | None]:

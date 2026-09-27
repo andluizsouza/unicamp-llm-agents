@@ -6,7 +6,7 @@ from collections.abc import Callable
 from typing import Any
 
 from recfair.config import CURRENT_ARCH, resolve_arch
-from recfair.graphs import baseline, multiagent, workflow
+from recfair.graphs import baseline, multiagent, resilient, workflow
 
 RunnerFn = Callable[..., tuple[Any, Any]]
 
@@ -14,6 +14,7 @@ _ARCHITECTURES: dict[str, RunnerFn] = {
     "baseline": baseline.run,
     "workflow": workflow.run,
     "multiagent": multiagent.run,
+    "resilient": resilient.run,
 }
 
 

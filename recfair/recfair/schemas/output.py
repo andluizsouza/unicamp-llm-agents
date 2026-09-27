@@ -26,20 +26,35 @@ class RecommendationItem(BaseModel):
     fairness_notes: str | None = None
 
 
+HaltReason = Literal[
+    "completed",
+    "abstained",
+    "schema_invalid",
+    "recursion_limit",
+    "timeout",
+    "degraded",
+    "tool_error",
+]
+
+
 class RecFairOutput(BaseModel):
     """Top-level agent response contract.
 
     ``faq`` and ``handoff`` are additive E3 statuses. Ranking cases (T01–T38)
     still use ``recommendation`` / ``abstention`` with the same item contract.
+    ``degraded`` / extra halt reasons are additive E4 fields (default off).
     """
 
     status: Literal["recommendation", "abstention", "faq", "handoff", "out_of_context"]
     items: list[RecommendationItem] = Field(default_factory=list)
     reason: Literal["missing_category", "unknown_category", "unknown_brand"] | None = None
-    halt_reason: Literal["completed", "abstained", "schema_invalid", "recursion_limit"]
+    halt_reason: HaltReason
     answer_text: str | None = None
     handoff_phone: str | None = None
     agents_route: list[str] = Field(default_factory=list)
+    degraded: bool = False
+    degraded_reason: str | None = None
+    citations: list[str] = Field(default_factory=list)
 
     @field_validator("items")
     @classmethod

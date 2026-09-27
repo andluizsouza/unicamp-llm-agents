@@ -97,14 +97,15 @@ Depois:
 
 ```bash
 make data                 # CSVs + índices FAISS — requer HF_TOKEN
-make chat                 # vigente = multiagent — requer GOOGLE_API_KEY
+make chat                 # vigente = resilient — requer GOOGLE_API_KEY
+make chat ARCH=multiagent # E3
 make chat ARCH=workflow   # E2
 make chat ARCH=baseline   # E1
 ```
 
 Mapa do repositório: [`README.md`](../README.md). Arquitetura: [`docs/architecture.md`](architecture.md).
 
-Relatórios de eval: [`eval/notebooks/E1_baseline.ipynb`](../eval/notebooks/E1_baseline.ipynb) · [`eval/notebooks/E2_workflow.ipynb`](../eval/notebooks/E2_workflow.ipynb) · [`eval/notebooks/E3_multiagents.ipynb`](../eval/notebooks/E3_multiagents.ipynb).
+Relatórios de eval: [`E1_baseline.ipynb`](../eval/notebooks/E1_baseline.ipynb) · [`E2_workflow.ipynb`](../eval/notebooks/E2_workflow.ipynb) · [`E3_multiagents.ipynb`](../eval/notebooks/E3_multiagents.ipynb) · [`E4_robustez_etica.ipynb`](../eval/notebooks/E4_robustez_etica.ipynb).
 
 Sem `GOOGLE_API_KEY` o `run_eval` do notebook não roda. Sem `HF_TOKEN` o `make data` falha ao baixar o MiniLM. `pytest` e `make lint` cobrem régua, guardrails e contratos sem chaves.
 

@@ -224,9 +224,7 @@ def build_context_summary_table(
     arches = [arch for arch in CONTEXT_ARCHITECTURES[context] if arch in manifests]
 
     for arch in arches:
-        block = (manifests[arch].get("resumo_v3") or {}).get("e3_by_context", {}).get(
-            context, {}
-        )
+        block = (manifests[arch].get("resumo_v3") or {}).get("e3_by_context", {}).get(context, {})
         row: dict[str, str] = {
             "versão": ARCHITECTURE_LABELS.get(arch, arch),
             "casos avaliados": str(block.get("n") or "—"),
@@ -239,10 +237,10 @@ def build_context_summary_table(
             row["taxa de aprovação"] = _fmt_rate(block.get("pass_rate"))
             row["taxa de vazamento"] = _fmt_rate(block.get("guardrail_hit_rate"))
         elif context == "faq":
-            row["similaridade semântica média"] = _fmt_score(
-                block.get("mean_semantic_similarity")
+            row["similaridade semântica média"] = _fmt_score(block.get("mean_semantic_similarity"))
+            row["limiar de aprovação"] = str(
+                block.get("semantic_threshold") or FAQ_SEMANTIC_THRESHOLD
             )
-            row["limiar de aprovação"] = str(block.get("semantic_threshold") or FAQ_SEMANTIC_THRESHOLD)
             row["taxa de aprovação"] = _fmt_rate(block.get("pass_rate"))
         else:
             row["taxa de roteamento correto"] = _fmt_rate(block.get("routing_pass_rate"))
@@ -320,10 +318,10 @@ def render_context_evaluation_section(
 
     intro = (
         f'<p style="margin:0 0 10px;font-size:14px;line-height:1.55;color:#1f2937;">'
-        f'<strong>Pergunta avaliada:</strong> {section["pergunta"]}<br>'
-        f'<strong>Comparação:</strong> {section["comparacao"]}<br>'
-        f'<strong>Métrica principal:</strong> {section["metrica_principal"]}<br>'
-        f'<strong>Casos:</strong> {section["casos"]}'
+        f"<strong>Pergunta avaliada:</strong> {section['pergunta']}<br>"
+        f"<strong>Comparação:</strong> {section['comparacao']}<br>"
+        f"<strong>Métrica principal:</strong> {section['metrica_principal']}<br>"
+        f"<strong>Casos:</strong> {section['casos']}"
         f"</p>"
     )
     summary_html = render_comparison_report(
@@ -346,7 +344,9 @@ def render_context_evaluation_section(
         status_col="status_final",
         title=f"Detalhe por caso — {CONTEXT_LABELS[context]}",
         subtitle=f"{len(cases_df)} casos · resultado individual",
-        code_columns=frozenset({"pergunta", "texto gerado", "referência", "rota executada", "gabarito"}),
+        code_columns=frozenset(
+            {"pergunta", "texto gerado", "referência", "rota executada", "gabarito"}
+        ),
         show_legend=True,
     )
     return intro + summary_html + instrumentation_html + cases_html

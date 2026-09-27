@@ -193,6 +193,8 @@ def summarize_records_v3(records: list[dict[str, Any]]) -> dict[str, Any]:
         "e3_by_context": by_context,
         "rf_breakdown": rf_df.to_dict(orient="records"),
     }
+
+
 def render_rf_breakdown_table(
     resumo_v3: dict[str, Any],
     *,

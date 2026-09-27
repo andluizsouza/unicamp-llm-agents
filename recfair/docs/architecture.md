@@ -1,26 +1,27 @@
 # Arquitetura RecFair
 
-**Última atualização:** 2026-09-19  
-**Arquitetura vigente (`CURRENT_ARCH`):** `multiagent` · data 2026-09-19 · ADR [0003](adr/0003-multiagent-supervisor.md) (E3 completo: runtime + régua + roteamento)  
-**Ainda executáveis:** `workflow` · 2026-09-13 · ADR [0002](adr/0002-workflow-scoring.md) · `baseline` · 2026-09-07 · ADR [0001](adr/0001-baseline.md)
+**Última atualização:** 2026-09-27  
+**Arquitetura vigente (`CURRENT_ARCH`):** `resilient` · data 2026-09-27 · ADR [0004](adr/0004-resilient-harness.md) (E4: harness + ética)  
+**Ainda executáveis:** `multiagent` · 2026-09-19 · ADR [0003](adr/0003-multiagent-supervisor.md) · `workflow` · 2026-09-13 · ADR [0002](adr/0002-workflow-scoring.md) · `baseline` · 2026-09-07 · ADR [0001](adr/0001-baseline.md)
 
-RecFair é um assistente de recomendação Top-5 para catálogo de beleza (Grupo Boticário, dados sintéticos), agora também com FAQ de e-commerce/revenda, transbordo humano e redirecionamento fora de contexto. Toda arquitetura expõe `RecFairOutput` e é medida pelo golden-set em `data/golden/cases.json` (**60 casos**, T01–T60).
+RecFair é um assistente de recomendação Top-5 para catálogo de beleza (Grupo Boticário, dados sintéticos), com FAQ de e-commerce/revenda, transbordo humano, redirecionamento fora de contexto e, no E4, contenção de falhas com resposta degradada rotulada. Toda arquitetura expõe `RecFairOutput` e é medida pelo golden-set em `data/golden/cases.json` (**60 casos**, T01–T60). Perfil capilar e demais eixos de paridade estão em `data/golden/min_pairs.json` (P01–P05), fora da taxa agregada.
 
 ---
 
 ## Visão geral das arquiteturas
 
-| | `baseline` (E1) | `workflow` (E2) | `multiagent` (E3, vigente) |
-| :--- | :--- | :--- | :--- |
-| **Padrão** | Monolito — 1× LLM | LangGraph — LLM só em `parse_intent` | Supervisor — 3 agentes + 3 nós |
-| **Dados no prompt** | Catálogo + vendas (~29k tokens) | Query NL | Query sanitizada + skills index / FAQ chunks |
-| **Ranking** | Modelo no prompt | `engine.py` (substring claims) | Mesmo engine E2; `semantic_fallback` só se substring falha no pool |
-| **Guardrail** | Não | Não | `security_node` regex/redact |
-| **FAQ / handoff / out_of_context** | Não | Não | Agente FAQ + nós template (telefone / redirecionamento) |
-| **Memória** | Stateless | `MemorySaver` | `MemorySaver` (mesmo recorte) |
-| **Prompt** | `baseline_v1` | `workflow_v2` | `multiagent_v3` + intent v2 |
-| **ADR** | [0001](adr/0001-baseline.md) | [0002](adr/0002-workflow-scoring.md) | [0003](adr/0003-multiagent-supervisor.md) |
-| **Relatório eval** | [E1_baseline.ipynb](../eval/notebooks/E1_baseline.ipynb) | [E2_workflow.ipynb](../eval/notebooks/E2_workflow.ipynb) | [E3_multiagents.ipynb](../eval/notebooks/E3_multiagents.ipynb) |
+| | `baseline` (E1) | `workflow` (E2) | `multiagent` (E3) | `resilient` (E4, vigente) |
+| :--- | :--- | :--- | :--- | :--- |
+| **Padrão** | Monolito — 1× LLM | LangGraph — LLM só em `parse_intent` | Supervisor — 3 agentes + 3 nós | Mesmo grafo E3 + harness |
+| **Dados no prompt** | Catálogo + vendas (~29k tokens) | Query NL | Query sanitizada + skills / FAQ | Idem E3; prompt `v4` (equidade) |
+| **Ranking** | Modelo no prompt | `engine.py` (substring claims) | Engine E2 + `semantic_fallback` | Idem E3 |
+| **Guardrail** | Não | Não | `security_node` regex/redact | Idem + verify pós-grafo |
+| **FAQ / handoff / out_of_context** | Não | Não | Agente FAQ + nós template | Idem; FAQ instável → degradado |
+| **Contenção** | Schema inválido → abstenção | `recursion_limit=12` | `recursion_limit=16` | Retry, timeout, degrade, 2 checks |
+| **Memória** | Stateless | `MemorySaver` | `MemorySaver` | Mesmo checkpointer E3 |
+| **Prompt** | `baseline_v1` | `workflow_v2` | `multiagent_v3` | `multiagent_v4` |
+| **ADR** | [0001](adr/0001-baseline.md) | [0002](adr/0002-workflow-scoring.md) | [0003](adr/0003-multiagent-supervisor.md) | [0004](adr/0004-resilient-harness.md) |
+| **Relatório eval** | [E1_baseline.ipynb](../eval/notebooks/E1_baseline.ipynb) | [E2_workflow.ipynb](../eval/notebooks/E2_workflow.ipynb) | [E3_multiagents.ipynb](../eval/notebooks/E3_multiagents.ipynb) | [E4_robustez_etica.ipynb](../eval/notebooks/E4_robustez_etica.ipynb) |
 
 ---
 
@@ -28,39 +29,64 @@ RecFair é um assistente de recomendação Top-5 para catálogo de beleza (Grupo
 
 ```
 recfair/
-├── cli.py                      # default = vigente (multiagent)
-├── config.py                   # CURRENT_ARCH=multiagent
+├── cli.py                      # default = vigente (resilient)
+├── config.py                   # CURRENT_ARCH=resilient
 ├── graphs/
 │   ├── registry.py
 │   ├── baseline.py
-│   ├── workflow/               # E2 — intocado no incremento
-│   └── multiagent/             # E3
-│       ├── skills.py           # dict SKILLS inline
-│       └── nodes/              # security, supervisor, recommend, faq, handoff, out_of_context
+│   ├── workflow/
+│   ├── multiagent/             # E3
+│   └── resilient/              # E4 runner
+├── harness/                    # retry, timeout, degrade, verify
 ├── tools/
-│   ├── scoring/engine.py       # claim_matcher opcional (default = E2)
+│   ├── scoring/engine.py
 │   ├── guardrails.py
-│   └── claims_semantic.py      # match_substring_or_semantic
-├── rag/                        # FAISS FAQ + build_indexes
-├── schemas/                    # RecFairOutput, ParsedIntent, RoutingDecision
-├── prompts/                    # baseline_v1, workflow_v2, multiagent_v3
+│   └── claims_semantic.py
+├── rag/
+├── schemas/
+├── prompts/                    # … + multiagent_v4
 └── observability/agent_trace.py
 
 eval/
-├── runner.py                   # run_eval + resumo_v3
-├── metrics.py                  # ndcg_at_5, classify_severity
-├── requirements.py             # RF-01–RF-07
-├── gold.py                     # gold_for + gold_naive_for
-├── contexts.py                 # contextos H.1–H.4
-├── glossary.py                 # glossário de métricas
-├── verify/                     # verify_case, famílias E3, campos v3
-├── report/                     # painéis HTML para notebooks
-└── notebooks/E3_multiagents.ipynb
+├── runner.py
+├── stats.py / reliability.py / ethics.py
+├── report/e4_panels.py
+└── notebooks/E4_robustez_etica.ipynb
 ```
 
 ---
 
-## Arquitetura `multiagent` (E3, vigente)
+## Arquitetura `resilient` (E4, vigente)
+
+**Objetivo:** conter falhas transitórias, tornar falhas silenciosas detectáveis e medir dano/viés sem um quarto agente.
+
+**Ganho esperado:** demos de contenção (p=0,4) e verificadores determinísticos; Painel A (T01–T60) empate dentro do intervalo de Wilson é resultado válido.
+
+### Grafo
+
+Reusa o LangGraph E3. O runner liga `harness_scope`, preenche `citations` e aplica `apply_silent_failure_checks`. FAQ/tool com falha após retries vira handoff com `degraded=True` e prefixo `[Resposta parcial]`.
+
+```mermaid
+flowchart TD
+    START([query]) --> SEC[security_node]
+    SEC --> SUP[supervisor]
+    SUP --> ROUTE{domain}
+    ROUTE -->|recommendation| REC[recommendation]
+    ROUTE -->|faq| FAQ[faq]
+    ROUTE -->|out_of_context| OOC[out_of_context]
+    ROUTE -->|handoff| HO[handoff]
+    FAQ --> VER[harness_verify]
+    REC --> VER
+    VER -->|ok| END([RecFairOutput])
+    VER -->|silencioso| DEG[handoff_degradado]
+    DEG --> END
+```
+
+**Controles:** `recursion_limit=16`; timeout LLM/FAQ; retry só em falha transitória; injeção `RECFAIR_INJECT_FAILURE_PROB` (default 0).
+
+---
+
+## Arquitetura `multiagent` (E3)
 
 **Objetivo:** atacar domínio único, claims substring e ausência de guardrail **sem** reescrever o ranking E2.
 
@@ -206,6 +232,7 @@ Regenerar: `make data` (CSVs **e** índices). O MiniLM autentica no Hugging Face
 | Artefato | Conteúdo |
 | :--- | :--- |
 | [E2_workflow.ipynb](../eval/notebooks/E2_workflow.ipynb) | Comparação E1×E2 (régua então vigente) |
+| [E4_robustez_etica.ipynb](../eval/notebooks/E4_robustez_etica.ipynb) | Seções A–K: contenção, 3 runs, Wilson, ética, quatro versões |
 | [E3_multiagents.ipynb](../eval/notebooks/E3_multiagents.ipynb) | Seções A–J + contextos H.1–H.4 + régua `e3_*`; `run_eval` das três arches |
 | [E1_baseline.ipynb](../eval/notebooks/E1_baseline.ipynb) | Relatório E1 (intacto) |
 
@@ -219,7 +246,7 @@ Runs JSON em `eval/runs/` (gitignore). Sem API key, o notebook documenta o camin
 | :--- | :--- |
 | `AgentTrace` | latência, LLM, tools, tokens por `agent_id` |
 | `ScoreTrace` | bônus/exclusões do engine |
-| CLI `/trace` | output + traces de agente e scoring |
+| CLI `/trace` | output + traces; linha de status mostra `degradado` |
 | Manifest | `resumo` legado + `resumo_v3` |
 
 ---
@@ -227,26 +254,26 @@ Runs JSON em `eval/runs/` (gitignore). Sem API key, o notebook documenta o camin
 ## Executar
 
 ```bash
-make chat                 # vigente → multiagent (ARCH=current)
+make chat                 # vigente → resilient (ARCH=current)
+make chat ARCH=multiagent
 make chat ARCH=workflow
 make chat ARCH=baseline
 make data                 # CSVs + FAISS
 ```
 
-Golden-set: [`eval/notebooks/E3_multiagents.ipynb`](../eval/notebooks/E3_multiagents.ipynb) chama `eval.runner.run_eval` — não há `make eval`.
+Golden-set: [`eval/notebooks/E4_robustez_etica.ipynb`](../eval/notebooks/E4_robustez_etica.ipynb) chama `eval.runner.run_eval` — não há `make eval`.
 
 ---
 
-## Deliberadamente fora do E3
+## Deliberadamente fora do E4
 
 | Peça | Motivo |
 | :--- | :--- |
+| Fairness auditor (agente) | E4 mede dano no eval; ADR 0003 já recusou |
 | MCP | Sem reuso nem fronteira |
-| Agente LLM de segurança / claims | Nós/tools determinísticos bastam |
-| Pacote `recfair/skills/` | Dict inline atende o enunciado |
-| Correção de intent/memória T09/T31 | Fora de escopo medido |
-| nDCG no runtime | Só no pacote `eval/` |
-| T61+ | Futuro (E4+) |
+| Memória de longo prazo | Checkpointer in-memory; accountability via `eval/runs/` |
+| WIP E3B (`multiagent_v2`) | Performance de retrieval, fora do enunciado E4 |
+| Mutar `verify_case` na régua T01–T60 | Skill: comparação principal herdada |
 
 ---
 
@@ -256,4 +283,5 @@ Golden-set: [`eval/notebooks/E3_multiagents.ipynb`](../eval/notebooks/E3_multiag
 | :--- | :--- | :--- | :--- |
 | `baseline` | 2026-09-07 | [0001](adr/0001-baseline.md) | executável (`ARCH=baseline`) |
 | `workflow` | 2026-09-13 | [0002](adr/0002-workflow-scoring.md) | executável (`ARCH=workflow`) |
-| `multiagent` | 2026-09-19 | [0003](adr/0003-multiagent-supervisor.md) | **vigente** (`CURRENT_ARCH`) |
+| `multiagent` | 2026-09-19 | [0003](adr/0003-multiagent-supervisor.md) | executável (`ARCH=multiagent`) |
+| `resilient` | 2026-09-27 | [0004](adr/0004-resilient-harness.md) | **vigente** (`CURRENT_ARCH`) |

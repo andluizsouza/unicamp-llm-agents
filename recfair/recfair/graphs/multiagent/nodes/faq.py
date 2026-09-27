@@ -11,7 +11,7 @@ from recfair.graphs.multiagent.node_helpers import agents_route
 from recfair.graphs.multiagent.skills import load_skill
 from recfair.graphs.multiagent.state import MultiAgentState
 from recfair.observability.agent_trace import AgentTrace, append_trace
-from recfair.prompts.multiagent_v3 import build_faq_prompt
+from recfair.prompts.dispatch import build_faq_prompt
 from recfair.rag.faq_index import FAQ_K, retrieve_faq
 from recfair.schemas.output import RecFairOutput
 from recfair.schemas.routing import AgentMetrics, AgentResult, FaqSynthesis, RoutingDecision

@@ -13,6 +13,8 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from recfair.config import data_dir, huggingface_token_kwargs
+from recfair.harness.adapters import retrieve_with_harness
+from recfair.harness.context import is_harness_enabled
 from recfair.rag.embedder import EMBEDDING_MODEL
 from recfair.rag.store import indexes_dir
 
@@ -121,8 +123,7 @@ def build_faq_index() -> FAISS:
     documents = faq_documents()
     if not documents:
         raise FileNotFoundError(
-            f"No FAQ KB files under {kb_dir()} "
-            f"(expected {FAQ_PDF_NAME} and/or {REVENDA_MD_NAME})"
+            f"No FAQ KB files under {kb_dir()} (expected {FAQ_PDF_NAME} and/or {REVENDA_MD_NAME})"
         )
 
     store = FAISS.from_documents(
@@ -158,7 +159,7 @@ def _load_store() -> FAISS:
     return _FAQ_STORE
 
 
-def retrieve_faq(query: str, *, k: int = FAQ_K) -> list[dict[str, Any]]:
+def _retrieve_faq_impl(query: str, *, k: int = FAQ_K) -> list[dict[str, Any]]:
     """Return top-k FAQ chunks with LangChain relevance scores (no score threshold)."""
     store = _load_store()
     results = store.similarity_search_with_relevance_scores(query, k=k)
@@ -173,3 +174,10 @@ def retrieve_faq(query: str, *, k: int = FAQ_K) -> list[dict[str, Any]]:
             }
         )
     return hits
+
+
+def retrieve_faq(query: str, *, k: int = FAQ_K) -> list[dict[str, Any]]:
+    """Retrieve FAQ chunks; E4 harness wraps timeout/retry/injection when enabled."""
+    if is_harness_enabled():
+        return retrieve_with_harness(_retrieve_faq_impl, query, k=k)
+    return _retrieve_faq_impl(query, k=k)

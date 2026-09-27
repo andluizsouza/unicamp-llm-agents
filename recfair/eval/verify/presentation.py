@@ -86,4 +86,3 @@ def recommendation_final_status(check: dict[str, Any], restrict: bool) -> str:
 
 def escopo_label(restrict: bool) -> str:
     return "restrito" if restrict else "global"
-

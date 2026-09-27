@@ -16,12 +16,29 @@ _CLAIM_PATTERNS: list[tuple[str, list[str]]] = [
     (r"vegano", ["vegano"]),
     (r"hipoalerg", ["hipoalergênico", "hipoalergenico"]),
     (r"queda", ["queda", "antiqueda"]),
+    (r"cachead|crespo|cachos", ["cacheado", "crespo", "cachos", "curvas"]),
     (r"fixaç|fixac", ["fixação", "fixacao", "alta fixação"]),
     (r"noturn", ["noturna", "noturno"]),
     (r"promoç|promoc", ["promoção", "promocao"]),
     (r"lançament|lancament", ["lançamento", "lancamento"]),
     (r"estoque", ["estoque"]),
 ]
+
+
+FROZEN_RULER_MAX_ID = 60
+
+
+def case_number(case_id: str) -> int:
+    """Numeric suffix of a golden case id (``T01`` → 1)."""
+    return int(str(case_id).lstrip("Tt"))
+
+
+def is_frozen_ruler_case(case: dict[str, Any]) -> bool:
+    """Whether the case belongs to the E1–E3 comparison ruler (T01–T60)."""
+    try:
+        return case_number(str(case.get("id") or "")) <= FROZEN_RULER_MAX_ID
+    except ValueError:
+        return False
 
 
 def load_cases(path: Path | None = None) -> list[dict[str, Any]]:

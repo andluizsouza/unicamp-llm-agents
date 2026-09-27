@@ -24,11 +24,17 @@ from recfair.config import (
     export_hf_token,
     model_version,
 )
-from recfair.graphs import baseline, multiagent, workflow
+from recfair.graphs import baseline, multiagent, resilient, workflow
 from recfair.graphs.registry import get_runner
 from recfair.observability.run_record import git_sha, new_run_id, run_started_at, save_run
 
-_THREADED = frozenset({workflow.architecture_id(), multiagent.architecture_id()})
+_THREADED = frozenset(
+    {
+        workflow.architecture_id(),
+        multiagent.architecture_id(),
+        resilient.architecture_id(),
+    }
+)
 
 
 def _architecture_date(arch_id: str) -> str:
@@ -38,6 +44,8 @@ def _architecture_date(arch_id: str) -> str:
         return workflow.architecture_date()
     if arch_id == multiagent.architecture_id():
         return multiagent.architecture_date()
+    if arch_id == resilient.architecture_id():
+        return resilient.architecture_date()
     return ARCHITECTURE_DATES.get(arch_id, datetime.now().date().isoformat())
 
 
@@ -48,10 +56,14 @@ def _prompt_version(arch_id: str) -> str:
         return workflow.prompt_version()
     if arch_id == multiagent.architecture_id():
         return multiagent.prompt_version()
+    if arch_id == resilient.architecture_id():
+        return resilient.prompt_version()
     return baseline.prompt_version()
 
 
 def _experiment_for(arch_id: str) -> str:
+    if arch_id == resilient.architecture_id():
+        return "e4"
     if arch_id == multiagent.architecture_id():
         return "e3"
     if arch_id == workflow.architecture_id():
@@ -96,7 +108,7 @@ def _merge_metrics(acc: Any, new: Any) -> Any:
 def _reset_thread(arch_id: str, thread_id: str) -> None:
     if arch_id == workflow.architecture_id():
         workflow.reset_checkpoint(thread_id)
-    elif arch_id == multiagent.architecture_id():
+    elif arch_id in {multiagent.architecture_id(), resilient.architecture_id()}:
         multiagent.reset_checkpoint(thread_id)
 
 

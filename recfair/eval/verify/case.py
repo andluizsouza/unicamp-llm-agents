@@ -157,12 +157,7 @@ def verify_case(case: dict[str, Any], output: RecFairOutput) -> dict[str, Any]:
             and faq_semantic_similarity >= FAQ_SEMANTIC_THRESHOLD
         )
         if expected_answer:
-            aprovado = (
-                output.status == "faq"
-                and semantic_ok
-                and not skus
-                and not invented
-            )
+            aprovado = output.status == "faq" and semantic_ok and not skus and not invented
         else:
             aprovado = output.status == "faq" and keyword_ok and not skus and not invented
     elif familia == "G_routing":

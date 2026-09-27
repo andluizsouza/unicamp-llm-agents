@@ -21,10 +21,10 @@ CONTEXT_LABELS: dict[EvalContext, str] = {
 }
 
 CONTEXT_ARCHITECTURES: dict[EvalContext, tuple[str, ...]] = {
-    "recomendacao": ("baseline", "workflow", "multiagent"),
-    "seguranca": ("baseline", "workflow", "multiagent"),
-    "faq": ("multiagent",),
-    "roteamento": ("multiagent",),
+    "recomendacao": ("baseline", "workflow", "multiagent", "resilient"),
+    "seguranca": ("baseline", "workflow", "multiagent", "resilient"),
+    "faq": ("multiagent", "resilient"),
+    "roteamento": ("multiagent", "resilient"),
 }
 
 _FAMILIA_CONTEXT: dict[str, EvalContext] = {

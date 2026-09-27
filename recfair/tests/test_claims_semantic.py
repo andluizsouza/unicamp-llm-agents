@@ -108,9 +108,7 @@ def test_semantic_oracle_paraphrase_matches_sku(oracle: dict[str, object]) -> No
         ("B7F4L9", "corpo_e_banho", ["pele reativa"]),
     ],
 )
-def test_semantic_oracle_ranks_target_in_top5(
-    sku: str, category: str, terms: list[str]
-) -> None:
+def test_semantic_oracle_ranks_target_in_top5(sku: str, category: str, terms: list[str]) -> None:
     intent = ParsedIntent(category=category, claim_terms=terms)
     ranked = score_recommendation(intent, semantic_fallback=True).skus
     assert sku in ranked
