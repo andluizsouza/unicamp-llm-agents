@@ -4,11 +4,18 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
-from typing import Any
+from pathlib import Path
+from typing import Any, Literal
 
-from eval.cases import is_frozen_ruler_case
+import pandas as pd
+
+from eval.cases import is_frozen_ruler_case, load_cases
+from eval.fingerprint import golden_revision
 from eval.runner import run_eval
 from recfair.config import eval_runs_dir
+
+RELIABILITY_FULL_N = 3
+_RELIABILITY_FULL_FIXTURE = Path(__file__).resolve().parent / "fixtures" / "e4_reliability_full.json"
 
 
 def _approved(record: dict[str, Any]) -> bool:
@@ -92,6 +99,207 @@ def run_reliability(
     return {"manifests": manifests, "resumo": summarize_reliability(manifests)}
 
 
+def _load_manifest(run_id: str) -> dict[str, Any] | None:
+    path = eval_runs_dir() / f"{run_id}.json"
+    if not path.is_file():
+        return None
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _frozen_count(manifest: dict[str, Any]) -> int:
+    return len(filter_frozen_records(list(manifest.get("records") or [])))
+
+
+def _is_full_resilient_manifest(manifest: dict[str, Any], *, expected_revision: str | None) -> bool:
+    if manifest.get("architecture_id") != "resilient":
+        return False
+    if manifest.get("fast_mode"):
+        return False
+    if _frozen_count(manifest) != 60:
+        return False
+    if expected_revision and manifest.get("golden_revision") != expected_revision:
+        return False
+    return True
+
+
+def load_reliability_full_fixture() -> dict[str, Any] | None:
+    """Pinned trio of full golden-set runs (written on first successful batch)."""
+    if not _RELIABILITY_FULL_FIXTURE.is_file():
+        return None
+    return json.loads(_RELIABILITY_FULL_FIXTURE.read_text(encoding="utf-8"))
+
+
+def save_reliability_full_fixture(run_ids: list[str], *, revision: str) -> Path:
+    """Persist the three run ids used for full-mode reliability."""
+    _RELIABILITY_FULL_FIXTURE.parent.mkdir(parents=True, exist_ok=True)
+    payload = {"golden_revision": revision, "run_ids": run_ids}
+    _RELIABILITY_FULL_FIXTURE.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return _RELIABILITY_FULL_FIXTURE
+
+
+def list_full_resilient_run_ids(
+    *,
+    revision: str | None = None,
+    limit: int = RELIABILITY_FULL_N,
+) -> list[str]:
+    """Most recent full ``resilient`` manifests (60× frozen), newest first."""
+    revision = revision or golden_revision(load_cases())
+    candidates: list[tuple[str, str]] = []
+    for path in eval_runs_dir().glob("*.json"):
+        try:
+            manifest = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+        if not _is_full_resilient_manifest(manifest, expected_revision=revision):
+            continue
+        run_id = str(manifest.get("run_id") or path.stem)
+        started = str(manifest.get("started_at") or "")
+        candidates.append((started, run_id))
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    return [run_id for _, run_id in candidates[:limit]]
+
+
+def reliability_rates_frame(manifests: list[dict[str, Any]]) -> pd.DataFrame:
+    """One row per repetition with pass rate (comparative table for §D)."""
+    resumo = summarize_reliability(manifests)
+    rows: list[dict[str, Any]] = []
+    for row in resumo["por_rodada"]:
+        taxa = row.get("taxa")
+        rows.append(
+            {
+                "rodada": row.get("rodada"),
+                "run_id": row.get("run_id"),
+                "acertos": row.get("acertos"),
+                "total": row.get("total"),
+                "taxa": taxa,
+                "taxa_%": round(float(taxa) * 100, 2) if taxa is not None else None,
+            }
+        )
+    frame = pd.DataFrame(rows)
+    if resumo.get("faixa"):
+        lo, hi = resumo["faixa"]
+        frame.attrs["faixa_min"] = lo
+        frame.attrs["faixa_max"] = hi
+    return frame
+
+
+def reliability_variation_frame(manifests: list[dict[str, Any]]) -> pd.DataFrame:
+    """Cases whose ``aprovado`` flag differs across repetitions."""
+    if not manifests:
+        return pd.DataFrame(columns=["caso"])
+    by_case: dict[str, dict[str, Any]] = {}
+    for index, manifest in enumerate(manifests, start=1):
+        label = f"rodada_{index}"
+        run_id = manifest.get("run_id")
+        for row in filter_frozen_records(list(manifest.get("records") or [])):
+            case_id = str((row.get("case") or {}).get("id") or "")
+            bucket = by_case.setdefault(case_id, {"caso": case_id})
+            approved = _approved(row)
+            bucket[label] = "sucesso" if approved else "erro"
+            bucket[f"{label}_run_id"] = run_id
+    varying: list[dict[str, Any]] = []
+    for bucket in by_case.values():
+        flags = [bucket.get(f"rodada_{i}") for i in range(1, len(manifests) + 1)]
+        if len(set(flags)) > 1:
+            varying.append({key: bucket[key] for key in ("caso",) + tuple(f"rodada_{i}" for i in range(1, len(manifests) + 1))})
+    if not varying:
+        return pd.DataFrame(columns=["caso"] + [f"rodada_{i}" for i in range(1, len(manifests) + 1)])
+    cols = ["caso"] + [f"rodada_{i}" for i in range(1, len(manifests) + 1)]
+    return pd.DataFrame(sorted(varying, key=lambda r: r["caso"]))[cols]
+
+
+def ensure_e4_reliability(
+    *,
+    fast_mode: bool,
+    cases: list[dict[str, Any]] | None = None,
+    n: int = RELIABILITY_FULL_N,
+    arch: str = "resilient",
+) -> dict[str, Any]:
+    """Load or execute ``n`` repetitions of E4 for section D.
+
+    Fast mode: always runs ``n`` times (non-persisted) on the given case subset.
+
+    Full mode: reuses the trio in ``eval/fixtures/e4_reliability_full.json`` when
+    valid; otherwise loads the latest ``n`` full manifests on disk; only if fewer
+    than ``n`` exist, runs the missing repetitions (persisted) and writes the fixture
+    on the first complete batch.
+
+    Returns:
+        Dict with ``manifests``, ``resumo``, ``rates_df``, ``variation_df``, and
+        ``source`` (``fixture`` | ``disk`` | ``executed`` | ``executed_partial``).
+    """
+    if n < 1:
+        raise ValueError("n must be ≥ 1")
+    all_cases = load_cases()
+    revision = golden_revision(all_cases)
+    case_list = cases if cases is not None else all_cases
+
+    if fast_mode:
+        manifests = [
+            run_eval(arch, persist=False, cases=case_list, fast_mode=True) for _ in range(n)
+        ]
+        resumo = summarize_reliability(manifests)
+        return {
+            "manifests": manifests,
+            "resumo": resumo,
+            "rates_df": reliability_rates_frame(manifests),
+            "variation_df": reliability_variation_frame(manifests),
+            "source": "executed",
+            "fast_mode": True,
+        }
+
+    manifests: list[dict[str, Any]] = []
+    source: Literal["fixture", "disk", "executed", "executed_partial"] = "disk"
+    fixture = load_reliability_full_fixture()
+    run_ids: list[str] = []
+    if fixture and fixture.get("golden_revision") == revision:
+        run_ids = list(fixture.get("run_ids") or [])[:n]
+        loaded = [_load_manifest(rid) for rid in run_ids]
+        if len(loaded) == n and all(m and _is_full_resilient_manifest(m, expected_revision=revision) for m in loaded):
+            manifests = loaded  # type: ignore[list-item]
+            source = "fixture"
+
+    if not manifests:
+        run_ids = list_full_resilient_run_ids(revision=revision, limit=n)
+        loaded = [_load_manifest(rid) for rid in run_ids]
+        loaded_ok = [m for m in loaded if m and _is_full_resilient_manifest(m, expected_revision=revision)]
+        if len(loaded_ok) >= n:
+            manifests = loaded_ok[:n]
+            source = "disk"
+            if not fixture:
+                save_reliability_full_fixture(
+                    [str(m.get("run_id")) for m in manifests],
+                    revision=revision,
+                )
+
+    if len(manifests) < n:
+        missing = n - len(manifests)
+        source = "executed_partial" if manifests else "executed"
+        for _ in range(missing):
+            manifests.append(run_eval(arch, persist=True, cases=all_cases, fast_mode=False))
+        if len(manifests) >= n:
+            save_reliability_full_fixture(
+                [str(m.get("run_id")) for m in manifests[:n]],
+                revision=revision,
+            )
+            source = "executed" if missing == n else "executed_partial"
+
+    resumo = summarize_reliability(manifests[:n])
+    manifests = manifests[:n]
+    return {
+        "manifests": manifests,
+        "resumo": resumo,
+        "rates_df": reliability_rates_frame(manifests),
+        "variation_df": reliability_variation_frame(manifests),
+        "source": source,
+        "fast_mode": False,
+        "fixture_path": str(_RELIABILITY_FULL_FIXTURE),
+    }
+
+
 def reliability_from_run_ids(run_ids: list[str]) -> dict[str, Any]:
     """Load persisted manifests by ``run_id`` and summarize reliability.
 
@@ -103,6 +311,14 @@ def reliability_from_run_ids(run_ids: list[str]) -> dict[str, Any]:
     """
     manifests: list[dict[str, Any]] = []
     for run_id in run_ids:
-        path = eval_runs_dir() / f"{run_id}.json"
-        manifests.append(json.loads(path.read_text(encoding="utf-8")))
-    return {"manifests": manifests, "resumo": summarize_reliability(manifests)}
+        manifest = _load_manifest(run_id)
+        if manifest is None:
+            raise FileNotFoundError(f"Manifest não encontrado: {run_id}")
+        manifests.append(manifest)
+    resumo = summarize_reliability(manifests)
+    return {
+        "manifests": manifests,
+        "resumo": resumo,
+        "rates_df": reliability_rates_frame(manifests),
+        "variation_df": reliability_variation_frame(manifests),
+    }

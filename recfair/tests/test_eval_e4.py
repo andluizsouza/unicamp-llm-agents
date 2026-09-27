@@ -156,3 +156,26 @@ def test_resilient_registered() -> None:
     assert "resilient" in list_architectures()
     assert "multiagent" in list_architectures()
     assert "baseline" in list_architectures()
+
+
+def test_reliability_variation_frame_detects_flip() -> None:
+    from eval.reliability import reliability_rates_frame, reliability_variation_frame
+
+    def _manifest(case_id: str, ok: bool) -> dict:
+        return {
+            "run_id": f"run_{case_id}_{ok}",
+            "architecture_id": "resilient",
+            "records": [
+                {
+                    "case": {"id": case_id},
+                    "check": {"aprovado": ok},
+                }
+            ],
+        }
+
+    manifests = [_manifest("T01", True), _manifest("T01", False)]
+    variation = reliability_variation_frame(manifests)
+    assert len(variation) == 1
+    assert variation.iloc[0]["caso"] == "T01"
+    rates = reliability_rates_frame(manifests)
+    assert len(rates) == 2

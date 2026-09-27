@@ -9,13 +9,23 @@ from typing import Any
 import pandas as pd
 
 from eval.cases import is_frozen_ruler_case
-from eval.contexts import CONTEXT_ARCHITECTURES, CONTEXT_LABELS, EVAL_CONTEXTS, EvalContext, filter_records_by_context
+from eval.contexts import (
+    CONTEXT_ARCHITECTURES,
+    CONTEXT_LABELS,
+    EVAL_CONTEXTS,
+    EvalContext,
+    filter_records_by_context,
+)
 from eval.ethics import pair_verdicts
 from eval.glossary import ARCHITECTURE_LABELS, CONTEXT_SECTIONS
 from eval.report.e3_panels import build_context_summary_table, render_arch_instrumentation_panel
-from eval.report.e4_panels import case_changes_table, consequence_matrix_table, prepare_consolidation_table
+from eval.report.e4_panels import case_changes_table, consequence_matrix_table
 from eval.report.html import _PANEL, _PANEL_HDR, render_comparison_report
-from eval.verify import final_status, format_baseline_col, is_restrict_scope, recommendation_final_status
+from eval.verify import (
+    final_status,
+    is_restrict_scope,
+    recommendation_final_status,
+)
 from recfair.config import eval_runs_dir
 
 E4_CANONICAL_RUN_IDS: dict[str, str] = {
@@ -24,7 +34,9 @@ E4_CANONICAL_RUN_IDS: dict[str, str] = {
     "multiagent": "ae3f3348d3e4",
 }
 
-_MIN_PAIRS_FIXTURE = Path(__file__).resolve().parent.parent / "fixtures" / "e4_min_pairs_resilient.json"
+_MIN_PAIRS_FIXTURE = (
+    Path(__file__).resolve().parent.parent / "fixtures" / "e4_min_pairs_resilient.json"
+)
 
 _ARCH_EVOLUTION_ROWS = [
     {
@@ -214,50 +226,70 @@ def build_e4_context_case_table(
     return frame[[c for c in cols if c in frame.columns]]
 
 
-def render_all_e4_context_sections(manifests: dict[str, dict[str, Any]]) -> str:
-    """H.1–H.4 style sections comparing all architectures present in ``manifests``."""
-    parts: list[str] = []
-    for context in EVAL_CONTEXTS:
-        section = CONTEXT_SECTIONS[context]
-        summary_df = build_context_summary_table(manifests, context)
-        cases_df = build_e4_context_case_table(manifests, context)
-        intro = (
-            f'<p style="margin:16px 0 10px;font-size:14px;line-height:1.55;color:#1f2937;">'
-            f"<strong>{section['titulo']}</strong><br>"
-            f"<strong>Pergunta:</strong> {section['pergunta']}<br>"
-            f"<strong>Métrica principal:</strong> {section['metrica_principal']}<br>"
-            f"<strong>Escopo:</strong> {CONTEXT_LABELS[context]} · {section['casos']}"
-            f"</p>"
-        )
-        parts.append(intro)
+_OVERALL_COLUMNS = ("versao", "arch", "acertos", "taxa", "ponderada", "faixa")
+
+
+def render_context_scope_card(context: EvalContext) -> str:
+    """Scope header on a light card so it stays readable in Jupyter dark mode."""
+    section = CONTEXT_SECTIONS[context]
+    return (
+        f'<div style="{_PANEL}">'
+        f'<div style="{_PANEL_HDR}">'
+        f'<div style="font-size:1.08rem;font-weight:700;color:#ffffff;margin:0;'
+        f'letter-spacing:-0.01em;">{section["titulo"]}</div>'
+        f"</div>"
+        f'<div style="padding:14px 18px;background:#ffffff;color:#111827;'
+        f'font-size:14px;line-height:1.65;">'
+        f'<div style="margin:0 0 6px;color:#111827;">'
+        f'<strong style="color:#0f172a;">Pergunta:</strong> {section["pergunta"]}</div>'
+        f'<div style="margin:0 0 6px;color:#111827;">'
+        f'<strong style="color:#0f172a;">Métrica principal:</strong> '
+        f"{section['metrica_principal']}</div>"
+        f'<div style="margin:0;color:#111827;">'
+        f'<strong style="color:#0f172a;">Escopo:</strong> '
+        f"{CONTEXT_LABELS[context]} · {section['casos']}</div>"
+        f"</div></div>"
+    )
+
+
+def render_e4_context_section(manifests: dict[str, dict[str, Any]], context: EvalContext) -> str:
+    """One context: scope card, aggregate table, and per-case columns per delivery."""
+    summary_df = build_context_summary_table(manifests, context)
+    cases_df = build_e4_context_case_table(manifests, context)
+    parts = [
+        render_context_scope_card(context),
+        render_comparison_report(
+            summary_df,
+            status_col="versão",
+            title=f"Agregado — {CONTEXT_LABELS[context]}",
+            subtitle="Uma linha por entrega · mesma régua T01–T60",
+            show_legend=False,
+        ),
+    ]
+    if context == "recomendacao" and len(manifests) > 1:
         parts.append(
-            render_comparison_report(
-                summary_df,
-                status_col="versão",
-                title=f"Agregado — {CONTEXT_LABELS[context]}",
-                subtitle="Uma linha por entrega · mesma régua T01–T60",
-                show_legend=False,
+            render_arch_instrumentation_panel(
+                manifests,
+                context,
+                title="Instrumentação (custo e latência por arquitetura)",
             )
         )
-        if context == "recomendacao" and len(manifests) > 1:
-            parts.append(
-                render_arch_instrumentation_panel(
-                    manifests,
-                    context,
-                    title="Instrumentação (custo e latência por arquitetura)",
-                )
-            )
-        parts.append(
-            render_comparison_report(
-                cases_df,
-                status_col="caso",
-                title=f"Detalhe por caso — {CONTEXT_LABELS[context]}",
-                subtitle="Colunas por entrega · verde/vermelho segue legenda sucesso/erro",
-                code_columns=frozenset({"pergunta", "caso"}),
-                show_legend=True,
-            )
+    parts.append(
+        render_comparison_report(
+            cases_df,
+            status_col="caso",
+            title=f"Detalhe por caso — {CONTEXT_LABELS[context]}",
+            subtitle="Colunas por entrega · verde/vermelho segue legenda sucesso/erro",
+            code_columns=frozenset({"pergunta", "caso"}),
+            show_legend=True,
         )
+    )
     return "".join(parts)
+
+
+def render_all_e4_context_sections(manifests: dict[str, dict[str, Any]]) -> str:
+    """H.1–H.4 sections comparing all architectures present in ``manifests``."""
+    return "".join(render_e4_context_section(manifests, context) for context in EVAL_CONTEXTS)
 
 
 def render_architecture_evolution_table() -> str:
@@ -291,13 +323,16 @@ def render_case_changes_panel(manifests: dict[str, dict[str, Any]]) -> str:
 
 
 def render_consolidation_panel(df: pd.DataFrame) -> str:
-    """Full consolidation + Wilson columns (operational metrics omitted)."""
-    slim = prepare_consolidation_table(df)
+    """Overall T01–T60 rates. Wilson intervals stay in section F."""
+    present = [col for col in _OVERALL_COLUMNS if col in df.columns]
     return render_comparison_report(
-        slim,
+        df[present].copy(),
         status_col="versao",
-        title="Consolidação T01–T60 (taxa simples + Wilson 95%)",
-        subtitle="Colunas operacionais (LLM, tools, latência, custo) omitidas — ver instrumentação H.1",
+        title="Consolidação T01–T60 (todos os testes)",
+        subtitle=(
+            "Uma linha por entrega · taxa simples na régua congelada · "
+            "custo e latência na instrumentação de recomendação"
+        ),
         show_legend=False,
     )
 
@@ -311,7 +346,10 @@ def render_containment_panel(stats: dict[str, Any]) -> str:
         ("Degradadas (handoff)", stats.get("degraded")),
         ("Recuperadas por retry", stats.get("recovered")),
         ("halt_reason na degradação", stats.get("halt_on_degrade")),
-        ("Usuário vê [Resposta parcial]", "sim" if stats.get("degraded_identifies_as_partial") else "não"),
+        (
+            "Usuário vê [Resposta parcial]",
+            "sim" if stats.get("degraded_identifies_as_partial") else "não",
+        ),
     ]
     df = pd.DataFrame(rows, columns=["métrica", "valor"])
     return render_comparison_report(
@@ -343,6 +381,44 @@ def render_silent_checks_panel(result: dict[str, Any]) -> str:
         subtitle="`verify_evidence` + `verify_confidence` → `apply_silent_failure_checks`",
         code_columns=frozenset({"códigos"}),
         show_legend=False,
+    )
+
+
+def render_reliability_rates_panel(rates_df: pd.DataFrame, *, source: str = "") -> str:
+    """Comparative pass-rate table for §D."""
+    if rates_df.empty:
+        return "<p>Sem rodadas de confiabilidade.</p>"
+    display = rates_df.copy()
+    if "taxa" in display.columns:
+        display = display.drop(columns=["taxa"], errors="ignore")
+    subtitle = "Taxa de aprovação por repetição · régua T01–T60 (ou amostra em RUN_FAST)"
+    if source:
+        subtitle += f" · origem: {source}"
+    return render_comparison_report(
+        display,
+        status_col="rodada",
+        title="Confiabilidade — taxas por rodada",
+        subtitle=subtitle,
+        code_columns=frozenset({"run_id"}),
+        show_legend=False,
+    )
+
+
+def render_reliability_variation_panel(variation_df: pd.DataFrame) -> str:
+    """Cases that flipped between reliability repetitions."""
+    if variation_df.empty:
+        return (
+            f'<div style="{_PANEL}"><div style="{_PANEL_HDR}">'
+            f'<div style="font-size:1.08rem;font-weight:700;color:#ffffff;">Casos com variação entre rodadas</div>'
+            f'<div style="font-size:12px;color:#e2e8f0;margin-top:5px;">Nenhum caso mudou aprovado/reprovado entre as execuções.</div>'
+            f"</div></div>"
+        )
+    return render_comparison_report(
+        variation_df,
+        status_col="caso",
+        title="Casos com variação entre rodadas",
+        subtitle="Somente testes cujo resultado mudou em pelo menos uma repetição",
+        show_legend=True,
     )
 
 
@@ -402,9 +478,9 @@ def render_wilson_interval_chart(df: pd.DataFrame) -> str:
             f'<div style="font-size:12px;font-weight:600;margin-bottom:4px;">{label} '
             f'<span style="color:#6b7280;font-weight:400;">({mid:.1%} · [{lo:.1%}, {hi:.1%}])</span></div>'
             f'<div style="position:relative;height:14px;background:#f3f4f6;border-radius:8px;">'
-            f'<div style="position:absolute;left:{lo*100:.1f}%;width:{(hi-lo)*100:.1f}%;'
+            f'<div style="position:absolute;left:{lo * 100:.1f}%;width:{(hi - lo) * 100:.1f}%;'
             f'height:14px;background:#3b82f6;border-radius:8px;opacity:0.85;"></div>'
-            f'<div style="position:absolute;left:{mid*100:.1f}%;width:4px;height:14px;'
+            f'<div style="position:absolute;left:{mid * 100:.1f}%;width:4px;height:14px;'
             f'background:#1e3a8a;margin-left:-2px;border-radius:2px;"></div>'
             f"</div></div>"
         )
