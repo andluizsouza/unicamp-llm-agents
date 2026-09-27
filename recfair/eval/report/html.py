@@ -47,9 +47,9 @@ def _fmt_cell(
 ) -> str:
     base = "padding:10px 12px;border-bottom:1px solid #e9ecef;color:#212529;vertical-align:top;"
     code_cols = code_columns or frozenset({"baseline", "gabarito"})
-    if col in _STATUS_COLUMNS:
-        canonical = _normalize_status(text)
-        if canonical:
+    canonical = _normalize_status(text)
+    if canonical and (col in _STATUS_COLUMNS or col not in frozenset({"caso", "pergunta"})):
+        if col in _STATUS_COLUMNS or canonical in _STATUS_ACCENT:
             return f'<td style="{base}">{_status_badge(canonical)}</td>'
     if col in code_cols:
         return (

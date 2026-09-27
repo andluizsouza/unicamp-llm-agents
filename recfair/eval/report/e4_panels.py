@@ -55,8 +55,8 @@ def consolidate_versions(
                 "arch": arch,
                 "acertos": f"{acertos} de {total}",
                 "taxa": acc["taxa"],
-                "wilson_lo": round(lo, 4),
-                "wilson_hi": round(hi, 4),
+                "lower_limit": round(lo, 4),
+                "upper_limit": round(hi, 4),
                 "ponderada": weighted.get("score"),
                 "faixa": faixa,
                 "chamadas_llm": llm,
@@ -68,14 +68,30 @@ def consolidate_versions(
     return pd.DataFrame(rows)
 
 
+def prepare_consolidation_table(df: pd.DataFrame) -> pd.DataFrame:
+    """Wilson-focused view: drop operational columns used only for cost/latency."""
+    keep = (
+        "versao",
+        "arch",
+        "acertos",
+        "taxa",
+        "lower_limit",
+        "upper_limit",
+        "ponderada",
+        "faixa",
+    )
+    present = [col for col in keep if col in df.columns]
+    return df[present].copy()
+
+
 def wilson_overlap_table(df: pd.DataFrame) -> pd.DataFrame:
     """Pairwise Wilson-interval overlap for architecture rates."""
     rows: list[dict[str, Any]] = []
     items = list(df.to_dict(orient="records"))
     for i, left in enumerate(items):
         for right in items[i + 1 :]:
-            a = (float(left["wilson_lo"]), float(left["wilson_hi"]))
-            b = (float(right["wilson_lo"]), float(right["wilson_hi"]))
+            a = (float(left["lower_limit"]), float(left["upper_limit"]))
+            b = (float(right["lower_limit"]), float(right["upper_limit"]))
             rows.append(
                 {
                     "par": f"{left['arch']} × {right['arch']}",

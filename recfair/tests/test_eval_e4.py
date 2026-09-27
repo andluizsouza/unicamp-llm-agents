@@ -144,8 +144,8 @@ def test_wilson_overlap_table() -> None:
 
     df = pd.DataFrame(
         [
-            {"arch": "a", "wilson_lo": 0.1, "wilson_hi": 0.4},
-            {"arch": "b", "wilson_lo": 0.35, "wilson_hi": 0.8},
+            {"arch": "a", "lower_limit": 0.1, "upper_limit": 0.4},
+            {"arch": "b", "lower_limit": 0.35, "upper_limit": 0.8},
         ]
     )
     overlap = wilson_overlap_table(df)

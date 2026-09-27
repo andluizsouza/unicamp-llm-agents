@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import json
 from collections import defaultdict
 from typing import Any
 
 from eval.cases import is_frozen_ruler_case
 from eval.runner import run_eval
+from recfair.config import eval_runs_dir
 
 
 def _approved(record: dict[str, Any]) -> bool:
@@ -87,4 +89,20 @@ def run_reliability(
     manifests = [
         run_eval(arch, persist=persist, cases=cases, fast_mode=fast_mode) for _ in range(n)
     ]
+    return {"manifests": manifests, "resumo": summarize_reliability(manifests)}
+
+
+def reliability_from_run_ids(run_ids: list[str]) -> dict[str, Any]:
+    """Load persisted manifests by ``run_id`` and summarize reliability.
+
+    Args:
+        run_ids: One manifest per repetition (same arch and golden-set).
+
+    Returns:
+        ``{"manifests": [...], "resumo": summarize_reliability(...)}``.
+    """
+    manifests: list[dict[str, Any]] = []
+    for run_id in run_ids:
+        path = eval_runs_dir() / f"{run_id}.json"
+        manifests.append(json.loads(path.read_text(encoding="utf-8")))
     return {"manifests": manifests, "resumo": summarize_reliability(manifests)}
