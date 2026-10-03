@@ -9,4 +9,6 @@ Decisões arquiteturais datadas. Índice canônico — detalhes técnicos e diag
 | 0003 | [RecFair E3 — multiagente, régua e roteamento](0003-multiagent-supervisor.md) | `multiagent` + `eval/` | 2026-09-19 | aceito (executável) |
 | 0004 | [RecFair E4 — harness resiliente e avaliação ética](0004-resilient-harness.md) | `resilient` + `eval/` | 2026-09-27 | aceito (vigente) |
 
-**Convenção:** nova peça (grafo, tool, MCP, memória, guardrail, harness) → novo ADR numerado + atualizar `docs/architecture.md` no mesmo conjunto de mudanças. O entregável E4 (resiliência e ética) está documentado no ADR 0004.
+**Convenção:** nova peça (grafo, tool, MCP, memória, guardrail, harness) → novo ADR numerado + atualizar `docs/architecture.md` no mesmo conjunto de mudanças.
+
+Cada ADR guarda a régua da sua entrega (E1: 30 casos, E2: 38, E3/E4: 60). O papel do harness no sistema está no ADR 0004, seções 3.1–3.4. A leitura numérica final das quatro versões fica no notebook E4.

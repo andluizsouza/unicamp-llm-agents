@@ -117,7 +117,9 @@ Manifest [`eval/runs/d79563e06651.json`](../../eval/runs/d79563e06651.json) vs b
 | Custo run | ~$0,38 | ~$0,01 | −97% |
 | `tool_calls` | 0 | 238 | +238 |
 
-Relatório interpretado: [`eval/notebooks/E2_workflow.ipynb`](../../eval/notebooks/E2_workflow.ipynb) (seções F, G, H).
+Relatório interpretado: [`eval/notebooks/E2_workflow.ipynb`](../../eval/notebooks/E2_workflow.ipynb) (seções F, G, H). Esses percentuais são da **régua de 38 casos** desta entrega.
+
+**Régua de 60 casos (E3/E4):** o workflow reexecutado é o manifest `6d5cb78a9e25` — 31/60 no agregado T01–T60. A tabela acima permanece a evidência dos 38 casos. FAQ e roteamento entram no E3, e por isso o agregado de 60 fica abaixo dos 76,3% de T01–T38. Detalhe no notebook E4.
 
 **Hipótese refutada:** latência não piorou — prompt menor compensa o grafo.
 

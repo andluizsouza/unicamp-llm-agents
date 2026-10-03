@@ -69,8 +69,12 @@ Edite `.env` e defina:
 
 | Variável | Uso |
 | :--- | :--- |
-| `GOOGLE_API_KEY` (ou `GEMINI_API_KEY`) | Gemini — `make chat` e `run_eval` no notebook |
-| `HF_TOKEN` | Hugging Face Hub — download autenticado do MiniLM (`make data`, FAQ RAG, claims semânticos) |
+| `GOOGLE_API_KEY` (ou `GEMINI_API_KEY`) | Gemini — `make chat` e `run_eval` no notebook. Obrigatória em **todas** as entregas que chamam o modelo |
+| `HF_TOKEN` | Hugging Face Hub — MiniLM. Necessário no **E3 e no E4** (`make data`, FAQ RAG, claims semânticos). E1 e E2 não baixam embedding |
+| `RECFAIR_INJECT_FAILURE_PROB` | Opcional, só `resilient` (E4). Default `0`. A demo do notebook usa `0.4` |
+| `RECFAIR_LLM_TIMEOUT_S` | Opcional, E4. Default `45` |
+| `RECFAIR_TOOL_TIMEOUT_S` | Opcional, E4. Default `20` |
+| `RECFAIR_MAX_RETRIES` | Opcional, E4. Default `3` tentativas **extras** |
 
 O runtime **exporta** essas variáveis de duas formas (nenhuma imprime o valor):
 
@@ -95,8 +99,17 @@ Depois:
 
 ## 6. Verificar instalação
 
+O que cada entrega precisa para rodar de verdade:
+
+| Entrega | Chat | Chave | Dados |
+| :--- | :--- | :--- | :--- |
+| **E1** | `make chat ARCH=baseline` | `GOOGLE_API_KEY` | CSVs de catálogo e vendas já versionados |
+| **E2** | `make chat ARCH=workflow` | `GOOGLE_API_KEY` | Mais `tb_claims` e `tb_inventory` (já no git). Ranking por substring, sem MiniLM |
+| **E3** | `make chat ARCH=multiagent` | `GOOGLE_API_KEY` + `HF_TOKEN` | `make data` — índices FAISS de FAQ e claims |
+| **E4** | `make chat` | as mesmas do E3 | Os mesmos índices. Variáveis `RECFAIR_*` só para a demo de falha |
+
 ```bash
-make data                 # CSVs + índices FAISS — requer HF_TOKEN
+make data                 # CSVs + índices FAISS — E3/E4, requer HF_TOKEN
 make chat                 # vigente = resilient — requer GOOGLE_API_KEY
 make chat ARCH=multiagent # E3
 make chat ARCH=workflow   # E2
@@ -107,7 +120,7 @@ Mapa do repositório: [`README.md`](../README.md). Arquitetura: [`docs/architect
 
 Relatórios de eval: [`E1_baseline.ipynb`](../eval/notebooks/E1_baseline.ipynb) · [`E2_workflow.ipynb`](../eval/notebooks/E2_workflow.ipynb) · [`E3_multiagents.ipynb`](../eval/notebooks/E3_multiagents.ipynb) · [`E4_robustez_etica.ipynb`](../eval/notebooks/E4_robustez_etica.ipynb).
 
-Sem `GOOGLE_API_KEY` o `run_eval` do notebook não roda. Sem `HF_TOKEN` o `make data` falha ao baixar o MiniLM. `pytest` e `make lint` cobrem régua, guardrails e contratos sem chaves.
+Sem `GOOGLE_API_KEY` o `run_eval` de qualquer notebook não roda. Sem `HF_TOKEN` o `make data` falha ao baixar o MiniLM — isso bloqueia FAQ e claims semânticos (E3/E4), não o chat do E1 nem o ranking por substring do E2. `pytest` e `make lint` cobrem régua, guardrails, harness e contratos sem chaves.
 
 ## Arquivos de dependências
 

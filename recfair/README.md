@@ -7,13 +7,26 @@ Sistema de recomendação com contrato **utilidade + justiça** para catálogo d
 ## O que o projeto faz
 
 - Recebe consulta em linguagem natural (ex.: *“shampoos Match mais vendidos abaixo de R$ 50”*).
-- Devolve **Top 5** SKUs ranqueados por regras de negócio **ou** abstenção (`RecFairOutput`).
-- Mede qualidade em golden-set congelado (**60 casos**, T01–T60, `data/golden/cases.json`) com verify automático (`from eval.verify import verify_case`). Pares éticos P01–P05 em `data/golden/min_pairs.json`.
+- Devolve **Top 5** SKUs ranqueados por regras de negócio **ou** abstenção (`RecFairOutput`). A partir do E3 também responde FAQ, transbordo e fora de contexto.
+- A régua **atual** é o golden-set de **60 casos** (T01–T60, `data/golden/cases.json`, `golden_revision=3cbcb3e4c4b9cec7`) com verify automático (`from eval.verify import verify_case`). Pares éticos P01–P05 ficam em `data/golden/min_pairs.json`, fora da taxa agregada.
 
 **Arquitetura vigente (E4):** `resilient` — grafo E3 + harness (retry, timeout, degradação, verificadores).  
 **E3 (executável):** `multiagent` — supervisor + recomendação + FAQ + roteamento.  
-**E2 (executável):** `workflow` — LangGraph + scoring determinístico.  
-**Baseline (E1):** `baseline` — uma chamada LLM com catálogo/vendas no prompt. As quatro executáveis.
+**E2 (executável):** `workflow` — LangGraph determinístico + scoring em 7 passos.  
+**Baseline (E1):** `baseline` — uma chamada LLM com catálogo/vendas no prompt. As quatro permanecem executáveis.
+
+### Régua por entrega
+
+O conjunto só cresceu. As saídas gravadas em E1 e E2 são da régua daquela entrega (30 e 38 casos). O `cases.json` de hoje tem 60, e é essa régua que o E4 usa para as quatro versões.
+
+| Entrega | Casos daquela etapa | O que a etapa acrescenta |
+| :--- | :--- | :--- |
+| **E1** | T01–T30 (30) | Stuffing; gaps de preço, claim, estoque e guardrail previstos |
+| **E2** | T01–T38 (38) | Memória T31–T33 e scoring T34–T38; gabarito passa a sair do engine |
+| **E3** | T01–T60 (60) | FAQ e roteamento; contextos H.1–H.4 **disjuntos** (somam 60) |
+| **E4** | os mesmos T01–T60 | Três rodadas de `resilient`; pares P01–P05 fora da taxa agregada |
+
+Contextos do E3/E4, distintos do Painel A legado (T01–T38 = recomendação + segurança): recomendação T01–T25 e T31–T38 (33); segurança T26–T30 (5); FAQ T39–T40 e T44–T51 (10); roteamento T41–T43 e T52–T60 (12).
 
 ---
 
@@ -41,10 +54,10 @@ Notebooks são **somente relatório** — importam o pacote, não implementam o 
 
 | Entregável | Notebook | Arquitetura | Conteúdo |
 | :--- | :--- | :--- | :--- |
-| **E1** | [`eval/notebooks/E1_baseline.ipynb`](eval/notebooks/E1_baseline.ipynb) | `baseline` | Baseline stuffing, 30 casos |
-| **E2** | [`eval/notebooks/E2_workflow.ipynb`](eval/notebooks/E2_workflow.ipynb) | `baseline` × `workflow` | Comparação, memória, tools, ADR |
-| **E3** | [`eval/notebooks/E3_multiagents.ipynb`](eval/notebooks/E3_multiagents.ipynb) | `baseline` × `workflow` × `multiagent` | Supervisor, FAQ, régua nDCG@5, contextos H.1–H.4 |
-| **E4** | [`eval/notebooks/E4_robustez_etica.ipynb`](eval/notebooks/E4_robustez_etica.ipynb) | quatro arches + `resilient` ×3 | Contenção, confiabilidade, Wilson, ética, recomendação |
+| **E1** | [`eval/notebooks/E1_baseline.ipynb`](eval/notebooks/E1_baseline.ipynb) | `baseline` | Stuffing, régua de 30 casos (snapshot da entrega) |
+| **E2** | [`eval/notebooks/E2_workflow.ipynb`](eval/notebooks/E2_workflow.ipynb) | `baseline` × `workflow` | Workflow, memória, tools locais, régua de 38 |
+| **E3** | [`eval/notebooks/E3_multiagents.ipynb`](eval/notebooks/E3_multiagents.ipynb) | `baseline` × `workflow` × `multiagent` | Supervisor, FAQ, nDCG@5, contextos H.1–H.4, 60 casos |
+| **E4** | [`eval/notebooks/E4_robustez_etica.ipynb`](eval/notebooks/E4_robustez_etica.ipynb) | as quatro, `resilient` em 3 rodadas | Contenção, Wilson, ética, recomendação; consolidação em `54bcd4958950` (46/60) |
 
 Reproduzir eval: abrir o notebook da entrega e executar células com `run_eval(arch=...)`. Requer `GOOGLE_API_KEY`. Não há `make eval`.
 

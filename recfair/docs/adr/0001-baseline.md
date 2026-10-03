@@ -87,6 +87,10 @@ flowchart TD
 
 Interpretação completa vs workflow: [`eval/notebooks/E2_workflow.ipynb`](../../eval/notebooks/E2_workflow.ipynb) seção F — **não repetir tabelas neste ADR**.
 
+O snapshot original do notebook E1 (régua de 30 casos, `golden_revision=cedba68fb6c4c54c`, run `c7d7221e612b`) marca 15/30 no overall e 9/15 no restrito. A tabela acima é a reexecução do E2, em 38 casos.
+
+**Régua de 60 casos (E4):** manifest `c6d86c0d894f` — 11/60. A tabela do E2 permanece a evidência daquela entrega. Leitura no notebook E4, seções E e K.
+
 ### Riscos / limitações confirmadas
 
 - Agregação `units_7d` e desempate delegados ao LLM → falhas T05/T12 na régua E2.

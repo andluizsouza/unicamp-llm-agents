@@ -178,11 +178,11 @@ flowchart TB
         S[scoring T34-T38]
         O[overall T01-T38]
     end
-    subgraph contexts [Contextos E3 H.1-H.4]
-        H1[recomendacao T01-T38]
-        H2[seguranca T26-T30]
-        H3[faq T39-T51]
-        H4[roteamento T41-T60]
+    subgraph contexts [Contextos E3 H.1-H.4 disjuntos]
+        H1["recomendacao: T01-T25 e T31-T38 (33)"]
+        H2["seguranca: T26-T30 (5)"]
+        H3["faq: T39-T40 e T44-T51 (10)"]
+        H4["roteamento: T41-T43 e T52-T60 (12)"]
     end
     subgraph metrics [Eixos resumo_v3]
         AE[aprovado_exact]
@@ -208,7 +208,16 @@ Módulos: `runner.py`, `metrics.py`, `requirements.py`, `gold.py`, `contexts.py`
 | Refinamento escopo | T43/T57/T58 → `G_out_of_context`; +T59/T60 | out_of_context vs handoff |
 | **Total** | **60 casos** | `data/golden/cases.json` |
 
-Total roteamento (H.4): 12 casos (3 rec, 3 FAQ, 2 transbordo, 4 fora de contexto).
+Os quatro contextos são **disjuntos** e somam 60. O Painel A / `overall` legado (T01–T38) reúne H.1 e H.2.
+
+| Contexto | Casos | n |
+| :--- | :--- | ---: |
+| H.1 recomendação | T01–T25, T31–T38 | 33 |
+| H.2 segurança | T26–T30 | 5 |
+| H.3 FAQ | T39–T40, T44–T51 | 10 |
+| H.4 roteamento | T41–T43, T52–T60 | 12 |
+
+H.4: 3 recomendação, 3 FAQ, 2 transbordo, 4 fora de contexto. Fonte: `eval/glossary.py` e o cabeçalho do notebook E3.
 
 `golden_revision` muda a cada acréscimo ou correção de defeito. Critério legado `aprovado` para T01–T38 **não** é reescrito; tightening de `G_need` vive em `gap_intentional_pass`.
 
@@ -266,6 +275,6 @@ Detalhe completo de runs: `eval/runs/<run_id>.json` e notebook — não duplicar
 
 - **Hipótese combinada:** supervisor + guardrail + claims embed fecham gaps de domínio e segurança; nDCG discrimina near-miss vs erro grave; `gap_intentional_pass` impede regressão futura; `out_of_context` separa recusa de escopo de transbordo humano.
 - **Experimento:** mesma sessão, `gemini-3.5-flash-lite`, `run_eval(arch="baseline")` + `run_eval(arch="workflow")` + `run_eval(arch="multiagent")` no notebook E3.
-- **Reavaliar até:** 2026-10-03 (Entregável 4).
+- **Reavaliado em:** 2026-10-03, no Entregável 4 (ADR 0004). Na régua de 60 casos o manifest canônico desta arquitetura é `ae3f3348d3e4` (41/60).
 
 Se o eval empatar ou piorar no Painel A, a hipótese é roteamento indevido (FAQ vs rec). Na data deste ADR o incremento era `CURRENT_ARCH`. Desde 2026-09-27 o default do CLI é `resilient` (ADR 0004); `multiagent` continua executável. Sem peças extras até nova evidência.

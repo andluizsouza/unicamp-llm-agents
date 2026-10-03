@@ -1,6 +1,6 @@
 # Arquitetura RecFair
 
-**Última atualização:** 2026-09-27  
+**Última atualização:** 2026-10-03 (evidência do E4 e faixas H.1–H.4; a promoção de `resilient` continua 2026-09-27)  
 **Arquitetura vigente (`CURRENT_ARCH`):** `resilient` · data 2026-09-27 · ADR [0004](adr/0004-resilient-harness.md) (E4: harness + ética)  
 **Ainda executáveis:** `multiagent` · 2026-09-19 · ADR [0003](adr/0003-multiagent-supervisor.md) · `workflow` · 2026-09-13 · ADR [0002](adr/0002-workflow-scoring.md) · `baseline` · 2026-09-07 · ADR [0001](adr/0001-baseline.md)
 
@@ -58,7 +58,7 @@ eval/
 
 ## Arquitetura `resilient` (E4, vigente)
 
-**Decisão:** ADR [0004](adr/0004-resilient-harness.md). Não há grafo novo. `graphs/resilient/runner.py` compila o LangGraph E3 e liga o pacote `recfair/harness/` só naquela chamada.
+**Decisão:** ADR [0004](adr/0004-resilient-harness.md) §§3.1–3.4. Não há grafo novo. O harness é a política de falha em volta da política de domínio do E3: `graphs/resilient/runner.py` compila o LangGraph E3 e liga o pacote `recfair/harness/` só naquela chamada. Com o escopo desligado, o mesmo grafo continua sendo o `multiagent`.
 
 **Componentes:**
 
@@ -74,7 +74,9 @@ eval/
 | Verify | `harness/verify_output.py` | `verify_evidence` + `verify_confidence` após o `invoke` |
 | Prompt | `prompts/multiagent_v4.py` | Equidade; `dispatch.py` só escolhe v4 com o harness ligado |
 
-**Ganho esperado:** contenção demonstrável sem LLM; falha silenciosa vira handoff rotulado. Empate de nDCG@5 no Painel A, dentro do intervalo de Wilson, é resultado válido. Ponte: [`eval/notebooks/E4_robustez_etica.ipynb`](../eval/notebooks/E4_robustez_etica.ipynb) e `tests/test_harness.py`. Runs `resilient` full ainda não estão em `eval/runs/`.
+**Ganho esperado:** contenção demonstrável sem LLM; falha silenciosa vira handoff rotulado. Empate de nDCG@5 no escopo de recomendação, dentro do intervalo de Wilson, é resultado válido.
+
+**Resultado registrado (2026-10-03):** três rodadas full em [`eval/notebooks/E4_robustez_etica.ipynb`](../eval/notebooks/E4_robustez_etica.ipynb) — `003a48fb5114` (44/60), `ad5ead0575f6` (43/60), `54bcd4958950` (46/60). A consolidação usa a terceira. nDCG@5 nos 33 casos de recomendação: 0,9641 (E3) e 0,9654 (E4). Wilson 95% de E3 e E4 se sobrepõe. Contenção sem LLM: `tests/test_harness.py`. Os JSON de `eval/runs/` não vão para o git.
 
 ### Fluxo do runner
 
@@ -139,14 +141,19 @@ flowchart TD
     ROUTE -->|faq| FAQ[faq_agent]
     ROUTE -->|out_of_context| OOC[out_of_context_node]
     ROUTE -->|handoff| HO[handoff_node]
-    FAQ -->|no_evidence| HO
+    FAQ -->|no_evidence ou error| HO
+    REC -->|error| HO
     REC --> END([END])
     FAQ --> END
     OOC --> END
     HO --> END
 ```
 
+O nó compilado é `recommendation` (`recommendation_node`). Por dentro ele chama `parse_intent`, o engine e a síntese. `route_after_recommend` manda `last_result.status=error` para `handoff`; `route_after_faq` faz o mesmo para `no_evidence` e `error`.
+
 **Controles:** `recursion_limit=16`; um replanejamento FAQ→handoff (`replanned=True` no contrato); skills carregadas só depois do roteamento (`load_skill`); especialistas gravam `last_result: AgentResult`.
+
+**Resultado na régua de 60:** manifest `ae3f3348d3e4` (41/60), mesma sessão dos canônicos E1/E2 citados no ADR 0004. Leitura por contexto no notebook E3, seção H.
 
 ### Por que segurança, out_of_context e handoff não são agentes
 
@@ -158,7 +165,15 @@ Reusa `parse_intent` E2 + `score_recommendation(..., semantic_fallback=True)` + 
 
 ### Memória
 
-Mesmo recorte E2: `MemorySaver` + `thread_id` → `session_intent`. T09/T31 **não** são alvo deste incremento.
+Cada grafo tem o seu `MemorySaver`. O mecanismo é o do E2: `thread_id` isola a conversa e `session_intent` vive no `parse_intent` da recomendação. T09 e T31 ficaram fora deste incremento.
+
+```mermaid
+flowchart LR
+    Q[query + thread_id] --> CP[(MemorySaver)]
+    CP --> PI[parse_intent]
+    PI --> SI[session_intent]
+    SI -.->|proximo turno| PI
+```
 
 ### Tools locais vs MCP
 
@@ -168,7 +183,7 @@ Guardrail (`sanitize_query`), claims embed, retrieve_faq e scoring são funçõe
 
 ## Arquitetura `baseline` (E1)
 
-**Objetivo:** baseline mínimo — uma chamada Gemini com catálogo e vendas no contexto, saída `RecFairOutput`.
+**Decisão:** ADR [0001](adr/0001-baseline.md). Uma chamada Gemini com catálogo e vendas no prompt, saída `RecFairOutput`. Componentes: `graphs/baseline.py`, `prompts/baseline_v1.py`. Sem LangGraph, tools, memória, claims, inventory ou FAQ.
 
 ```mermaid
 flowchart LR
@@ -179,26 +194,61 @@ flowchart LR
     LLM --> OUT[RecFairOutput]
 ```
 
-**Deliberadamente ausente no E1:** LangGraph, tools, memória, claims, inventory, FAQ.
+**Ganho esperado:** baseline honesto de interpretação NL, com contrato estável para as versões seguintes.
+
+**Evidência:** snapshot da entrega em [`eval/notebooks/E1_baseline.ipynb`](../eval/notebooks/E1_baseline.ipynb) — run `c7d7221e612b`, 15/30 no overall e 9/15 no restrito (`golden_revision=cedba68fb6c4c54c`). Reexecução na régua de 38: `00b767134d22` (7/38). Na régua de 60: `c6d86c0d894f` (11/60).
 
 ---
 
 ## Arquitetura `workflow` (E2)
 
-**Objetivo:** separar interpretação NL de ranking determinístico.
+**Decisão:** ADR [0002](adr/0002-workflow-scoring.md). LLM só em `parse_intent` (`prompts/workflow_v2.py`); ranking em `tools/scoring/engine.py`. Grafo em `graphs/workflow/` — nós compilados `parse_intent`, `score`, `abstain`, `synthesize`. `recursion_limit=12`.
 
 ```mermaid
 flowchart TD
     START([START]) --> PI[parse_intent]
     PI --> ROUTE{route_after_intent}
-    ROUTE -->|abstain| AB[abstain_node]
-    ROUTE -->|proceed| SC[scoring_node]
-    SC --> SY[synthesize_node]
+    ROUTE -->|abstain| AB[abstain]
+    ROUTE -->|score| SC[score]
+    SC --> SY[synthesize]
     AB --> END1([END])
     SY --> END2([END])
 ```
 
-Pipeline de 7 passos em `engine.py` (ADR 0002). `eval/gold.py` delega ao mesmo engine **sem** matcher semântico.
+### Pipeline de tools
+
+Os sete passos são uma tool lógica (`score_recommendation`). `eval/gold.py` chama o mesmo engine com matcher por substring. O fallback semântico existe só no caminho multiagent.
+
+```mermaid
+flowchart LR
+    subgraph steps [engine.py]
+        direction TB
+        s1[filter] --> s2[exclude]
+        s2 --> s3[claims]
+        s3 --> s4[diversity]
+        s4 --> s5[promo]
+        s5 --> s6[rank]
+        s6 --> s7[top5]
+    end
+    DB[(SQLite e CSV)] --> steps
+    steps --> TR[ScoreTrace]
+```
+
+### Memória
+
+`MemorySaver` + `thread_id`. O invoke não reenvia `session_intent` vazio: um dict vazio apagaria o checkpoint no turno seguinte. T31–T33 são o caso que justifica o incremento.
+
+```mermaid
+flowchart LR
+    T[turno N + thread_id] --> CP[(MemorySaver)]
+    CP --> PI[parse_intent]
+    PI --> SI[session_intent]
+    SI -.->|turno N+1| CP
+```
+
+**Ganho esperado:** agregação, filtros e claims deixam de depender do modelo; prompt curto; trace por SKU.
+
+**Evidência:** régua de 38 casos no [`eval/notebooks/E2_workflow.ipynb`](../eval/notebooks/E2_workflow.ipynb) — workflow `d79563e06651` (76,3% overall) contra baseline `00b767134d22` (18,4%), `golden_revision=15f3ed6986de9ce9`. Na régua de 60 o workflow é `6d5cb78a9e25` (31/60): FAQ e roteamento entram só no E3.
 
 ---
 
@@ -228,20 +278,20 @@ Definidos em `eval/contexts.py`:
 
 ```mermaid
 flowchart LR
-    H1[H.1 recomendacao] --> T01_T38[T01-T38]
-    H2[H.2 seguranca] --> T26_T30[T26-T30]
-    H3[H.3 faq] --> T39_T51[T39-T51]
-    H4[H.4 roteamento] --> T41_T60[T41-T60]
+    H1[H.1 recomendacao] --> R[T01-T25 e T31-T38]
+    H2[H.2 seguranca] --> S[T26-T30]
+    H3[H.3 faq] --> F[T39-T40 e T44-T51]
+    H4[H.4 roteamento] --> T[T41-T43 e T52-T60]
 ```
 
-| Contexto | Casos | Arquiteturas medidas |
-| :--- | :--- | :--- |
-| `recomendacao` | T01–T38 | baseline, workflow, multiagent |
-| `seguranca` | T26–T30 | baseline, workflow, multiagent |
-| `faq` | T39–T51 | multiagent |
-| `roteamento` | T41–T60 | multiagent |
+| Contexto | Casos | n | Arquiteturas medidas |
+| :--- | :--- | ---: | :--- |
+| `recomendacao` | T01–T25, T31–T38 | 33 | baseline, workflow, multiagent, resilient |
+| `seguranca` | T26–T30 | 5 | baseline, workflow, multiagent, resilient |
+| `faq` | T39–T40, T44–T51 | 10 | multiagent, resilient |
+| `roteamento` | T41–T43, T52–T60 | 12 | multiagent, resilient |
 
-Painel A (T01–T38) permanece congelado para comparação com E2. Painéis H.1–H.4 organizam o notebook E3 por contexto.
+As quatro faixas são disjuntas e somam 60. O Painel A (T01–T38) reúne H.1 e H.2 e permanece a comparação legada com o E2. H.1–H.4 organizam os notebooks E3 e E4. FAQ e roteamento medem só `multiagent` e `resilient` (`CONTEXT_ARCHITECTURES` em `eval/contexts.py`).
 
 `e1_rate_*` / `e2_rate_*` permanecem no manifest. Métricas **não** vivem no notebook.
 
@@ -258,7 +308,7 @@ A régua T01–T60 e `verify_case` não mudam. O que entra é leitura extra, for
 | `eval/ethics.py` | Peso de dano 0–5, score ponderado, pares P01–P05 |
 | `data/golden/min_pairs.json` | Paridade (cabelo, gênero, idade, registro); ouro compartilhado |
 
-Manifests canônicos E1–E3 na régua de 60 casos: `c6d86c0d894f`, `6d5cb78a9e25`, `ae3f3348d3e4` (`golden_revision=3cbcb3e4c4b9cec7`).
+Manifests canônicos na régua de 60 casos (`golden_revision=3cbcb3e4c4b9cec7`): `c6d86c0d894f` (E1, 11/60), `6d5cb78a9e25` (E2, 31/60), `ae3f3348d3e4` (E3, 41/60), `54bcd4958950` (E4, rodada de consolidação, 46/60). As outras rodadas E4 são `003a48fb5114` (44/60) e `ad5ead0575f6` (43/60).
 
 ---
 
@@ -296,6 +346,21 @@ Runs JSON em `eval/runs/` (gitignore). Sem API key, o notebook documenta o camin
 | `ScoreTrace` | bônus/exclusões do engine |
 | CLI `/trace` | output + traces; linha de status mostra `degradado` |
 | Manifest | `resumo` legado + `resumo_v3` |
+
+---
+
+## Hard-stops e humano no circuito
+
+RecFair não conclui compra. O telefone de transbordo é o corte para a pessoa.
+
+| Arquitetura | O que interrompe o turno |
+| :--- | :--- |
+| `baseline` | Saída que não valida o schema → abstenção |
+| `workflow` | `recursion_limit=12`; schema inválido → abstenção |
+| `multiagent` | `recursion_limit=16`; um replan FAQ→handoff; confiança do supervisor abaixo de 0,45 → `out_of_context` |
+| `resilient` | Os limites do E3, mais timeout por operação, retry só em falha transitória, e handoff quando o verificador discorda da fonte |
+
+No E4 o usuário vê `[Resposta parcial]` e o telefone quando o prazo estoura, a tool esgota o retry, ou a citação não está na fonte. Confirmar cada passo do ranking fica de fora: transferiria a lista inteira para quem pergunta.
 
 ---
 
